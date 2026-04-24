@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, User, Sparkles, CheckCircle2, Users } from 'lucide-react';
 import CheckoutModal from '../components/CheckoutModal';
+import CountdownTimer from '../components/CountdownTimer';
 
 const WorkshopDetail = () => {
   const { id } = useParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
+
+  const registrationDeadline = "2026-04-24T23:59:00";
+  const isRegistrationExpired = new Date().getTime() > new Date(registrationDeadline).getTime();
 
   const handleRegisterClick = () => {
     setIsWaiting(true);
@@ -134,7 +138,14 @@ const WorkshopDetail = () => {
 
             {/* Thẻ hiển thị giá vé & Đăng ký */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Thông tin đăng ký</h3>
+              <div className="mb-6">
+                <div className="text-center text-sm font-bold mb-3 uppercase tracking-wider text-gray-500">
+                  Đóng đăng ký sau
+                </div>
+                <CountdownTimer targetDate="24/04/2026 23:59" expiredMessage="Đã hết hạn đăng ký" />
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 mb-2 border-t border-gray-100 pt-6">Thông tin đăng ký</h3>
               <div className="flex justify-between items-end py-4 border-b border-gray-100 mb-6">
                 <div>
                   <p className="text-sm text-gray-500 font-medium">Giá vé</p>
@@ -148,10 +159,10 @@ const WorkshopDetail = () => {
               
               <button 
                 onClick={handleRegisterClick}
-                disabled={isWaiting}
-                className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${isWaiting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30 hover:-translate-y-1'}`}
+                disabled={isWaiting || isRegistrationExpired}
+                className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${(isWaiting || isRegistrationExpired) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30 hover:-translate-y-1'}`}
               >
-                {isWaiting ? (
+                {isRegistrationExpired ? 'Hết thời hạn đăng ký' : isWaiting ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

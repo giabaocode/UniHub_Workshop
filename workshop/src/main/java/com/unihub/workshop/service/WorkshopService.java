@@ -18,4 +18,8 @@ public class WorkshopService {
     public List<Workshop> getAllWorkshops() {
         return workshopRepository.findAll();
     }
+
+    public Workshop createWorkshop(Workshop workshop) {
+        return workshopRepository.save(workshop);
+    }
 }
