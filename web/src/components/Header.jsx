@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Header = () => {
+  const location = useLocation();
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,17 +14,43 @@ const Header = () => {
             <span className="font-bold text-xl text-gray-900 tracking-tight">UniHub Workshop</span>
           </Link>
           
-          <nav className="hidden md:flex space-x-8">
-            <Link to="/" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">Lịch Workshop</Link>
-            <Link to="/my-tickets" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">Vé của tôi</Link>
-          </nav>
-          
-          <div className="flex items-center space-x-4">
-            <Link to="/login" className="text-gray-600 hover:text-blue-600 font-medium transition-colors hidden md:block">
-              Đăng nhập
-            </Link>
-            <Link to="/login" state={{ isRegister: true }} className="bg-blue-600 text-white px-5 py-2 rounded-full font-medium hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg transform hover:-translate-y-0.5 inline-block">
-              Đăng ký
+          <div className="flex items-center space-x-8">
+            <nav className="hidden md:flex space-x-8">
+              <Link 
+                to="/" 
+                className={`font-medium transition-all duration-200 border-b-2 py-1 ${
+                  location.pathname === '/' 
+                    ? 'text-blue-600 border-blue-600' 
+                    : 'text-gray-600 border-transparent hover:text-blue-600 hover:border-blue-200'
+                }`}
+              >
+                Lịch Workshop
+              </Link>
+              <Link 
+                to="/my-tickets" 
+                className={`font-medium transition-all duration-200 border-b-2 py-1 ${
+                  location.pathname === '/my-tickets' 
+                    ? 'text-blue-600 border-blue-600' 
+                    : 'text-gray-600 border-transparent hover:text-blue-600 hover:border-blue-200'
+                }`}
+              >
+                Vé của tôi
+              </Link>
+            </nav>
+            
+            {/* Đã đăng nhập (Mock) */}
+            <Link to="/profile" className="flex items-center gap-3 cursor-pointer group md:border-l md:border-gray-200 md:pl-8">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-[2px] group-hover:scale-105 transition-transform shrink-0">
+                <img 
+                  src="https://ui-avatars.com/api/?name=Student&background=fff&color=3b82f6" 
+                  alt="User Avatar" 
+                  className="w-full h-full rounded-full object-cover border-2 border-white"
+                />
+              </div>
+              <div className="hidden md:block text-left">
+                <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Nguyễn Văn A</p>
+                <p className="text-xs text-gray-500">sv.nguyenvana@unihub.edu.vn</p>
+              </div>
             </Link>
           </div>
         </div>
