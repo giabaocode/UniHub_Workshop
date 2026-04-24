@@ -1,25 +1,93 @@
 import React, { useState } from 'react';
-import { UploadCloud, CheckCircle2 } from 'lucide-react';
+import { Clock, Timer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import CustomDatePicker from '../components/CustomDatePicker';
+import CustomTimePicker from '../components/CustomTimePicker';
+import ImageUploader from '../components/ImageUploader';
+import AiPdfUploader from '../components/AiPdfUploader';
+import { workshopService } from '../services/workshopService';
+import { handleNumberKeyDown } from '../utils/helpers'; 
+
 const AdminCreateWorkshop = () => {
-  const [isDragging, setIsDragging] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "", speaker: "", eventDate: "", startTime: "", room: "",
+    totalSeats: "", price: "", registrationDeadlineDate: "", registrationDeadlineTime: "",
+    description: "", coverImageUrl: "", 
+  });
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setErrors(prev => ({ ...prev, [name]: '' }));
+    if (name === 'totalSeats' || name === 'price') {
+      if (value !== '' && !/^\d+$/.test(value)) {
+        setErrors(prev => ({ ...prev, [name]: 'Chỉ được nhập số nguyên dương!' }));
+      }
+    }
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
+  const handleImageChange = (url) => {
+    setFormData(prev => ({ ...prev, coverImageUrl: url }));
+    setErrors(prev => ({ ...prev, coverImageUrl: '' }));
   };
 
-  const handleDrop = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsDragging(false);
-    // Xử lý file
+    const todayDateStr = new Date().toISOString().split('T')[0];
+    const todayDateTime = new Date();
+    const currentTimeStr = `${String(todayDateTime.getHours()).padStart(2, '0')}:${String(todayDateTime.getMinutes()).padStart(2, '0')}`;
+    const newErrors = {};
+
+    if (!formData.coverImageUrl) newErrors.coverImageUrl = 'Vui lòng tải lên ảnh bìa cho sự kiện!';
+    if (!formData.title.trim()) newErrors.title = 'Vui lòng nhập tên sự kiện!';
+    if (!formData.speaker.trim()) newErrors.speaker = 'Vui lòng nhập tên diễn giả!';
+    
+    if (formData.eventDate) {
+        if (formData.eventDate < todayDateStr) newErrors.eventDate = 'Ngày tổ chức không được nhỏ hơn ngày hiện tại!';
+        else if (formData.eventDate === todayDateStr && formData.startTime && formData.startTime < currentTimeStr) 
+            newErrors.startTime = 'Giờ bắt đầu phải lớn hơn giờ hiện tại!';
+    }
+
+    if (formData.registrationDeadlineDate) {
+        if (formData.registrationDeadlineDate < todayDateStr) newErrors.registrationDeadlineDate = 'Ngày đóng đăng ký không được trong quá khứ!';
+        else if (formData.registrationDeadlineDate === todayDateStr && formData.registrationDeadlineTime && formData.registrationDeadlineTime < currentTimeStr) 
+            newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải lớn hơn giờ hiện tại!';
+        
+        if (formData.eventDate && formData.registrationDeadlineDate > formData.eventDate) 
+            newErrors.registrationDeadlineDate = 'Ngày đóng vượt quá ngày diễn ra!';
+        else if (formData.eventDate && formData.registrationDeadlineDate === formData.eventDate && formData.registrationDeadlineTime && formData.startTime && formData.registrationDeadlineTime >= formData.startTime) 
+            newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải trước giờ bắt đầu!';
+    }
+
+    if (formData.totalSeats === '') newErrors.totalSeats = 'Vui lòng nhập số lượng ghế!';
+    else if (!/^\d+$/.test(formData.totalSeats) || Number(formData.totalSeats) < 0) newErrors.totalSeats = 'Chỉ nhập số nguyên dương!';
+
+    if (formData.price !== '' && (!/^\d+$/.test(formData.price) || Number(formData.price) < 0)) newErrors.price = 'Giá vé chỉ nhập số nguyên dương!';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      totalSeats: formData.totalSeats ? parseInt(formData.totalSeats) : 0,
+      price: formData.price ? parseFloat(formData.price) : 0.0,
+      startTime: formData.startTime.length === 5 ? formData.startTime : null,
+      registrationDeadline: formData.registrationDeadlineDate && formData.registrationDeadlineTime 
+        ? `${formData.registrationDeadlineDate}T${formData.registrationDeadlineTime}` : null
+    };
+
+    try {
+      await workshopService.createWorkshop(payload);
+      alert("Tạo Workshop thành công!");
+      navigate("/admin"); 
+    } catch (error) {
+      alert("Lỗi: " + error.message);
+    }
   };
 
   return (
@@ -30,131 +98,73 @@ const AdminCreateWorkshop = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Cột trái: Thông tin cơ bản (Chiếm 7 cột) */}
+        {/* CỘT TRÁI (FORM) */}
         <div className="lg:col-span-7 bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
           <h2 className="text-lg font-bold text-gray-900 mb-6 border-b border-gray-100 pb-4">Thông tin cơ bản</h2>
-          
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Tên sự kiện <span className="text-red-500">*</span></label>
-              <input 
-                type="text" 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm"
-                placeholder="Nhập tên workshop..."
-              />
+              <input name='title' value={formData.title} onChange={handleChange} type="text" className={`w-full px-4 py-3 rounded-xl border ${errors.title ? 'border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100'} focus:ring-4 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm`} placeholder="Nhập tên workshop..." />
+              {errors.title && <p className="text-red-500 text-xs mt-1 font-medium">{errors.title}</p>}
             </div>
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Tên diễn giả <span className="text-red-500">*</span></label>
-              <input 
-                type="text" 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm"
-                placeholder="Nhập tên diễn giả..."
-              />
+              <input name='speaker' value={formData.speaker} onChange={handleChange} type="text" className={`w-full px-4 py-3 rounded-xl border ${errors.speaker ? 'border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100'} focus:ring-4 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm`} placeholder="Nhập tên diễn giả..." />
+              {errors.speaker && <p className="text-red-500 text-xs mt-1 font-medium">{errors.speaker}</p>}
             </div>
-
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6 relative z-30">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Ngày tổ chức</label>
-                <input 
-                  type="date" 
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm text-gray-600"
-                />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Ngày tổ chức <span className="text-red-500">*</span></label>
+                <CustomDatePicker name="eventDate" value={formData.eventDate} onChange={handleChange} placeholder="DD/MM/YYYY" min={new Date().toISOString().split('T')[0]} />
+                {errors.eventDate && <p className="text-red-500 text-xs mt-1 font-medium">{errors.eventDate}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Giờ bắt đầu</label>
-                <input 
-                  type="time" 
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm text-gray-600"
-                />
+                <CustomTimePicker name="startTime" value={formData.startTime} onChange={handleChange} placeholder="--:--" icon={Clock} />
+                {errors.startTime && <p className="text-red-500 text-xs mt-1 font-medium">{errors.startTime}</p>}
               </div>
             </div>
-
+            <div className="grid grid-cols-2 gap-6 relative z-20">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Ngày đóng đăng ký</label>
+                <CustomDatePicker name="registrationDeadlineDate" value={formData.registrationDeadlineDate} onChange={handleChange} placeholder="DD/MM/YYYY" min={new Date().toISOString().split('T')[0]} max={formData.eventDate || null} />
+                {errors.registrationDeadlineDate && <p className="text-red-500 text-xs mt-1 font-medium">{errors.registrationDeadlineDate}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Giờ đóng đăng ký</label>
+                <CustomTimePicker name="registrationDeadlineTime" value={formData.registrationDeadlineTime} onChange={handleChange} placeholder="--:--" icon={Timer} />
+                {errors.registrationDeadlineTime && <p className="text-red-500 text-xs mt-1 font-medium">{errors.registrationDeadlineTime}</p>}
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Phòng / Địa điểm</label>
-              <input 
-                type="text" 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm"
-                placeholder="Ví dụ: Hội trường A, Tầng 3"
-              />
+              <input name='room' value={formData.room} onChange={handleChange} type="text" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm" placeholder="Ví dụ: Hội trường A, Tầng 3" />
             </div>
-
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6 relative z-10">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Số lượng ghế</label>
-                <input 
-                  type="number" 
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm"
-                  placeholder="Ví dụ: 100"
-                />
+                <input name='totalSeats' value={formData.totalSeats} onChange={handleChange} onKeyDown={handleNumberKeyDown} type="text" inputMode="numeric" className={`w-full px-4 py-3 rounded-xl border ${errors.totalSeats ? 'border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100'} focus:ring-4 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm`} placeholder="Ví dụ: 100" />
+                {errors.totalSeats && <p className="text-red-500 text-xs mt-1 font-medium">{errors.totalSeats}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Giá vé (VNĐ)</label>
-                <input 
-                  type="number" 
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm"
-                  placeholder="0 nếu Miễn phí"
-                />
+                <input name='price' value={formData.price} onChange={handleChange} onKeyDown={handleNumberKeyDown} type="text" inputMode="numeric" className={`w-full px-4 py-3 rounded-xl border ${errors.price ? 'border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100'} focus:ring-4 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm`} placeholder="0 nếu Miễn phí" />
+                {errors.price && <p className="text-red-500 text-xs mt-1 font-medium">{errors.price}</p>}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Cột phải: Khu vực AI & Tài liệu (Chiếm 5 cột) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex flex-col">
-          <div className="mb-6 border-b border-gray-100 pb-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <span className="bg-gradient-to-r from-purple-600 to-blue-500 text-transparent bg-clip-text">AI Smart Assistant</span>
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">Hỗ trợ trích xuất thông tin tự động từ tài liệu</p>
-          </div>
-
-          <div 
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`flex-1 min-h-[300px] flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 ${
-              isDragging 
-                ? 'border-blue-500 bg-blue-50/50' 
-                : 'border-gray-300 bg-gray-50/50 hover:bg-gray-50 hover:border-gray-400'
-            }`}
-          >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 transition-colors duration-200 ${isDragging ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-400 shadow-sm border border-gray-100'}`}>
-              <UploadCloud size={32} />
-            </div>
-            
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Kéo thả file PDF vào đây
-            </h3>
-            <p className="text-sm text-gray-500 mb-6 max-w-xs">
-              hoặc click để chọn file. Hệ thống AI sẽ tự động đọc và tóm tắt nội dung Workshop.
-            </p>
-            
-            <button className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl shadow-sm hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-colors focus:ring-2 focus:ring-blue-500 outline-none">
-              Duyệt file từ máy tính
-            </button>
-          </div>
-
-          <div className="mt-6 flex items-start gap-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100/50">
-            <CheckCircle2 className="text-blue-500 shrink-0 mt-0.5" size={18} />
-            <p className="text-xs text-blue-800 leading-relaxed">
-              <strong>Mẹo:</strong> Upload outline hoặc slide bài giảng để AI tự động tạo mô tả sự kiện hấp dẫn, đề xuất câu hỏi Q&A và tags phù hợp.
-            </p>
-          </div>
+        {/* CỘT PHẢI (LINH KIỆN ĐÃ ĐƯỢC TÁCH) */}
+        <div className="lg:col-span-5 space-y-6">
+          <ImageUploader value={formData.coverImageUrl} onChange={handleImageChange} error={errors.coverImageUrl} />
+          <AiPdfUploader />
         </div>
       </div>
 
-      {/* Buttons */}
       <div className="flex justify-end items-center gap-4 pt-4">
-        <button 
-          onClick={() => navigate('/admin')}
-          className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors"
-        >
-          Hủy
-        </button>
-        <button className="px-8 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/20 transition-all transform hover:-translate-y-0.5">
-          Lưu & Đăng Sự kiện
-        </button>
+        <button onClick={() => navigate('/admin')} className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all">Hủy</button>
+        <button onClick={handleSubmit} className="px-8 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">Lưu & Đăng Sự kiện</button>
       </div>
     </div>
   );
