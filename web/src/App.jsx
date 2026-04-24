@@ -13,6 +13,10 @@ import UserProfile from './pages/UserProfile';
 import AdminLayout from './components/AdminLayout';
 import NotFound from './pages/NotFound';
 import AuthPage from './pages/AuthPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ProtectedRoute from './components/ProtectedRoute';
+
+import { AuthProvider } from './context/authContext';
 
 // Wrapper layout for pages with header
 const MainLayout = ({ children }) => (
@@ -26,30 +30,33 @@ const MainLayout = ({ children }) => (
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Route không có header */}
-        <Route path="/login" element={<AuthPage />} />
-        
-        {/* Các route có header */}
-        <Route path="/" element={<MainLayout><StudentHome /></MainLayout>} />
-        <Route path="/workshop/:id" element={<MainLayout><WorkshopDetail /></MainLayout>} />
-        <Route path="/my-tickets" element={<MainLayout><MyTickets /></MainLayout>} />
-        <Route path="/profile" element={<MainLayout><UserProfile /></MainLayout>} />
-        
-        {/* Các route Admin (sử dụng AdminLayout riêng) */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="create" element={<AdminCreateWorkshop />} />
-          <Route path="workshop/:id/attendees" element={<AdminWorkshopAttendees />} />
-          <Route path="staff" element={<AdminStaffManagement />} />
-          <Route path="settings" element={<AdminSettings />} />
-          <Route path="profile" element={<UserProfile />} />
-        </Route>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Route không có header */}
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          
+          {/* Các route có header */}
+          <Route path="/" element={<MainLayout><StudentHome /></MainLayout>} />
+          <Route path="/workshop/:id" element={<MainLayout><WorkshopDetail /></MainLayout>} />
+          <Route path="/my-tickets" element={<ProtectedRoute><MainLayout><MyTickets /></MainLayout></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><MainLayout><UserProfile /></MainLayout></ProtectedRoute>} />
+          
+          {/* Các route Admin (sử dụng AdminLayout riêng) */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="create" element={<AdminCreateWorkshop />} />
+            <Route path="workshop/:id/attendees" element={<AdminWorkshopAttendees />} />
+            <Route path="staff" element={<AdminStaffManagement />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="profile" element={<UserProfile />} />
+          </Route>
 
-        <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
-      </Routes>
-    </Router>
+          <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

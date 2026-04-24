@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Home, ArrowLeft, KeyRound } from 'lucide-react';
+import { AuthContext } from '../context/authContext';
 
 const AuthPage = () => {
   const location = useLocation();
@@ -8,6 +9,40 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isOtp, setIsOtp] = useState(false);
+
+  const { login, register } = useContext(AuthContext);
+  
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+        navigate('/');
+      } else {
+        if (password !== confirmPassword) {
+          setError('Mật khẩu xác nhận không khớp');
+          setIsLoading(false);
+          return;
+        }
+        await register(fullName, email, password);
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Allow passing state from Link to automatically switch tabs (e.g. from Header register button)
   useEffect(() => {
@@ -116,7 +151,13 @@ const AuthPage = () => {
             </div>
           </form>
         ) : (
-          <form className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-500">
+          <form onSubmit={handleSubmit} className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-500">
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-medium border border-red-100">
+                {error}
+              </div>
+            )}
+            
             {!isLogin && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Họ và Tên</label>
@@ -126,6 +167,9 @@ const AuthPage = () => {
                   </div>
                   <input 
                     type="text" 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required={!isLogin}
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
                     placeholder="Nguyễn Văn A"
                   />
@@ -141,6 +185,9 @@ const AuthPage = () => {
                 </div>
                 <input 
                   type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
                   placeholder="sv@student.edu.vn"
                 />
@@ -166,6 +213,9 @@ const AuthPage = () => {
                 </div>
                 <input 
                   type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
                   placeholder="••••••••"
                 />
@@ -181,6 +231,9 @@ const AuthPage = () => {
                   </div>
                   <input 
                     type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required={!isLogin}
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
                     placeholder="••••••••"
                   />
@@ -189,12 +242,12 @@ const AuthPage = () => {
             )}
 
             <button 
-              type="button" 
-              onClick={() => isLogin ? navigate('/') : setIsOtp(true)}
-              className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-2"
+              type="submit" 
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}
-              <ArrowRight size={20} />
+              {isLoading ? 'Đang xử lý...' : (isLogin ? 'Đăng nhập' : 'Tạo tài khoản')}
+              {!isLoading && <ArrowRight size={20} />}
             </button>
 
             <div className="relative flex items-center py-2">
