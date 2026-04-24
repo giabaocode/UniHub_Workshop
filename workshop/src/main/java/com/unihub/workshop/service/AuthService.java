@@ -13,12 +13,18 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, AuthenticationManager authenticationManager) {
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -38,9 +44,17 @@ public class AuthService {
         );
 
         userRepository.save(user);
+
         String jwtToken = jwtService.generateToken(user);
 
-        return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole());
+        return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber()
+        );
     }
 
     public AuthResponse authenticate(LoginRequest request) {
@@ -56,6 +70,13 @@ public class AuthService {
 
         String jwtToken = jwtService.generateToken(user);
 
-        return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole());
+        return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber()
+        );
     }
 }

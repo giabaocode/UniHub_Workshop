@@ -27,8 +27,19 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    // --- HÀM MỚI: CẬP NHẬT THÔNG TIN NGƯỜI DÙNG NGAY LẬP TỨC ---
+    const updateUser = (newUserData) => {
+        // Lấy dữ liệu user hiện tại từ State
+        setUser(prevUser => {
+            const updated = { ...prevUser, ...newUserData };
+            // Lưu lại vào localStorage để F5 không bị mất
+            localStorage.setItem('user', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
     return (
-        <AuthContext.Provider value={{ user, updateUser, login, register, logout }}>
+        <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );
