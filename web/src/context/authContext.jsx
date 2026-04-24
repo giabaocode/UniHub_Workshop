@@ -4,14 +4,13 @@ import authService from '../services/auth.service';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => authService.getCurrentUser());
 
-    useEffect(() => {
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-            setUser(currentUser);
-        }
-    }, []);
+    const updateUser = (updatedFields) => {
+        const newUser = { ...user, ...updatedFields };
+        setUser(newUser);
+        localStorage.setItem('user', JSON.stringify(newUser));
+    };
 
     const login = async (email, password) => {
         const data = await authService.login(email, password);
@@ -29,7 +28,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout }}>
+        <AuthContext.Provider value={{ user, updateUser, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

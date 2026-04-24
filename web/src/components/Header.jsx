@@ -51,7 +51,7 @@ const Header = () => {
                 <Link to="/profile" className="flex items-center gap-3 cursor-pointer group md:border-l md:border-gray-200 md:pl-8">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-[2px] group-hover:scale-105 transition-transform shrink-0">
                     <img 
-                      src={`https://ui-avatars.com/api/?name=${user.fullName}&background=fff&color=3b82f6`}
+                      src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=fff&color=3b82f6`}
                       alt="User Avatar" 
                       className="w-full h-full rounded-full object-cover border-2 border-white"
                     />
