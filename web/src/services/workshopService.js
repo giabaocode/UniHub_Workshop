@@ -28,18 +28,29 @@ export const workshopService = {
   },
 
   // Mốt bạn có thể viết thêm các hàm khác ở đây cực gọn:
- getAllWorkshops: async () => {
+  getAllWorkshops: async () => {
     try {
       const response = await fetch(BASE_URL);
       if (!response.ok) {
         throw new Error("Không thể tải dữ liệu từ Server");
       }
-      return await response.json(); // Trả về mảng các workshop
+      return await response.json();
     } catch (error) {
       console.error("API Error in getAllWorkshops:", error);
       throw error;
     }
-  }
-  // getWorkshopById: async (id) => { ... }
-  // deleteWorkshop: async (id) => { ... }
+  },
+
+  getWorkshopById: async (id) => {
+    try {
+      const response = await fetch(`${BASE_URL}/${id}`);
+      if (!response.ok) {
+        throw new Error("Không tìm thấy Workshop");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("API Error in getWorkshopById:", error);
+      throw error;
+    }
+  },
 };

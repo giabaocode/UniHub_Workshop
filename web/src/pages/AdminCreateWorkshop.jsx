@@ -13,7 +13,7 @@ const AdminCreateWorkshop = () => {
   const [formData, setFormData] = useState({
     title: "", speaker: "", eventDate: "", startTime: "", room: "",
     totalSeats: "", price: "", registrationDeadlineDate: "", registrationDeadlineTime: "",
-    description: "", coverImageUrl: "", 
+    description: "", coverImageUrl: "", pdfUrl: "", aiSummary: "",
   });
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
@@ -32,6 +32,21 @@ const AdminCreateWorkshop = () => {
   const handleImageChange = (url) => {
     setFormData(prev => ({ ...prev, coverImageUrl: url }));
     setErrors(prev => ({ ...prev, coverImageUrl: '' }));
+  };
+
+  const handleAiPdfResult = (result) => {
+    if (result) {
+      setFormData(prev => ({
+        ...prev,
+        pdfUrl: result.pdfUrl || '',
+        // Tóm tắt chi tiết cho vào description (Nội dung chương trình)
+        description: result.detailedSummary || prev.description,
+        // Tóm tắt ngắn cho vào aiSummary (AI Card)
+        aiSummary: `[SUMMARY]\n${result.briefSummary}\n[HASHTAGS]\n${(result.hashtags || []).join(', ')}`,
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, pdfUrl: '', aiSummary: '' }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -152,13 +167,24 @@ const AdminCreateWorkshop = () => {
                 {errors.price && <p className="text-red-500 text-xs mt-1 font-medium">{errors.price}</p>}
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả workshop / Nội dung chương trình</label>
+              <textarea
+                name='description'
+                value={formData.description}
+                onChange={handleChange}
+                rows={6}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm resize-none"
+                placeholder="Nhập mô tả chi tiết hoặc upload PDF để AI tự điền..."
+              />
+            </div>
           </div>
         </div>
 
         {/* CỘT PHẢI (LINH KIỆN ĐÃ ĐƯỢC TÁCH) */}
         <div className="lg:col-span-5 space-y-6">
           <ImageUploader value={formData.coverImageUrl} onChange={handleImageChange} error={errors.coverImageUrl} />
-          <AiPdfUploader />
+          <AiPdfUploader onResult={handleAiPdfResult} />
         </div>
       </div>
 

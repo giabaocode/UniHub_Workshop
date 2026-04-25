@@ -27,6 +27,12 @@ public class Workshop {
     @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String pdfUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String aiSummary;
+
     public Workshop() {
     }
 
@@ -130,5 +136,21 @@ public class Workshop {
 
     public void setCoverImageUrl(String coverImageUrl) {
         this.coverImageUrl = coverImageUrl;
+    }
+
+    public String getPdfUrl() {
+        return pdfUrl;
+    }
+
+    public void setPdfUrl(String pdfUrl) {
+        this.pdfUrl = pdfUrl;
+    }
+
+    public String getAiSummary() {
+        return aiSummary;
+    }
+
+    public void setAiSummary(String aiSummary) {
+        this.aiSummary = aiSummary;
     }
 }

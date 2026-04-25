@@ -2,13 +2,8 @@ package com.unihub.workshop.controller;
 
 import com.unihub.workshop.entity.Workshop;
 import com.unihub.workshop.service.WorkshopService;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -28,8 +23,15 @@ public class WorkshopController {
         return workshopService.getAllWorkshops();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Workshop> getWorkshopById(@PathVariable Long id) {
+        return workshopService.getWorkshopById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
-    public Workshop createWorkshop(@RequestBody Workshop workshop){
+    public Workshop createWorkshop(@RequestBody Workshop workshop) {
         return workshopService.createWorkshop(workshop);
     }
 }

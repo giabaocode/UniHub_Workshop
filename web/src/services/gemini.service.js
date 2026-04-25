@@ -76,5 +76,91 @@ Chương trình: ${agendaText}`;
     return { summary, hashtags };
 };
 
-const geminiService = { summarizeWorkshop };
+/**
+ * Tóm tắt nội dung PDF workshop đã được trích xuất thành text.
+ * @param {string} pdfText - Nội dung text thuần túy đã trích xuất từ PDF
+ * @returns {Promise<{ briefSummary: string, detailedSummary: string, hashtags: string[] }>}
+ */
+const summarizePdfContent = async (pdfText) => {
+    if (!pdfText || pdfText.trim().length < 30) {
+        throw new Error('Nội dung PDF quá ngắn hoặc trống.');
+    }
+
+    // Cắt bớt nếu quá dài
+    const truncatedText = pdfText.substring(0, 10000);
+
+    const prompt = `Bạn là trợ lý AI của UniHub Workshop. 
+Dưới đây là nội dung trích xuất từ file PDF giới thiệu workshop.
+Hãy tạo 2 phiên bản tóm tắt và danh sách hashtag.
+
+KHÔNG chào hỏi, KHÔNG dùng icon, CHỈ in ra ĐÚNG định dạng sau:
+
+[BRIEF_SUMMARY]
+(Viết 1-2 câu cực kỳ ngắn gọn để hiển thị ở thẻ tóm tắt nhanh)
+
+[DETAILED_SUMMARY]
+(Trình bày chi tiết về nội dung, lộ trình và mục tiêu. Sử dụng dấu gạch đầu dòng '-' cho các ý chính để người đọc dễ theo dõi)
+
+[HASHTAGS]
+tag1, tag2, tag3, tag4, tag5
+
+--- NỘI DUNG PDF ---
+${truncatedText}
+--- HẾT ---`;
+
+    const response = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 2048,
+            }
+        }),
+    });
+
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || `Gemini API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) throw new Error('Gemini không trả về nội dung.');
+
+    console.log('[Gemini PDF Summary Raw]', text);
+
+    let briefSummary = '';
+    let detailedSummary = '';
+    let hashtags = [];
+
+    try {
+        const briefMatch = text.match(/\[BRIEF_SUMMARY\]([\s\S]*?)\[DETAILED_SUMMARY\]/i);
+        const detailedMatch = text.match(/\[DETAILED_SUMMARY\]([\s\S]*?)\[HASHTAGS\]/i);
+        const tagsMatch = text.match(/\[HASHTAGS\]([\s\S]*)/i);
+
+        briefSummary = briefMatch ? briefMatch[1].trim() : '';
+        detailedSummary = detailedMatch ? detailedMatch[1].trim() : '';
+        
+        if (tagsMatch) {
+            const rawTags = tagsMatch[1].trim();
+            hashtags = rawTags.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(tag => tag !== '');
+        }
+
+        // Fallback nếu parse lỗi
+        if (!briefSummary && !detailedSummary) {
+            briefSummary = text.substring(0, 200) + '...';
+            detailedSummary = text;
+        }
+    } catch (error) {
+        console.error('[PDF Extraction Error]', error);
+        briefSummary = "Không thể phân tách nội dung.";
+        detailedSummary = text;
+    }
+
+    return { briefSummary, detailedSummary, hashtags };
+};
+
+const geminiService = { summarizeWorkshop, summarizePdfContent };
 export default geminiService;
