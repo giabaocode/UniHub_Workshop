@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/workshops/**").permitAll() // Allow viewing workshops
                         .requestMatchers("/uploads/**").permitAll() // Allow serving uploaded files
+                        .requestMatchers("/api/tickets/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
