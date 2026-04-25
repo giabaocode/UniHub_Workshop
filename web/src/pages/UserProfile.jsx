@@ -7,7 +7,7 @@ import userService from '../services/user.service';
 const UserProfile = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
+  const { logout, updateUser } = useContext(AuthContext);
   const isAdminRoute = location.pathname.startsWith('/admin');
 
   const [profile, setProfile] = useState({
@@ -70,8 +70,11 @@ const UserProfile = () => {
       // Update local state
       setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
       
-      // Automatically save the profile with new avatar
+      // Save to backend
       await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
+
+      // Sync navbar immediately
+      updateUser({ avatarUrl: newAvatarUrl });
 
       setMessage({ type: 'success', text: 'Đã cập nhật ảnh đại diện!' });
       setTimeout(() => {
@@ -91,6 +94,10 @@ const UserProfile = () => {
     setMessage({ type: '', text: '' });
     try {
       await userService.updateProfile(profile);
+
+      // Sync navbar immediately
+      updateUser({ fullName: profile.fullName, avatarUrl: profile.avatarUrl });
+
       setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
       
       // Clear success message after 3 seconds
