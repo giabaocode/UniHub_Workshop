@@ -341,16 +341,14 @@ const formatBoldText = (text) => {
             {/* Thẻ hiển thị giá vé & Đăng ký */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
               {workshop.registrationDeadline && (
-                <div className="mb-6">
-                  <div className="text-center text-sm font-bold mb-3 uppercase tracking-wider text-gray-500">
-                    Đóng đăng ký sau
-                  </div>
-                  <CountdownTimer
-                    targetDate={new Date(workshop.registrationDeadline).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    expiredMessage="Đã hết hạn đăng ký"
-                  />
-                </div>
-              )}
+  <div className="mb-6">
+    <CountdownTimer
+      targetDate={workshop.registrationDeadline}
+      title="Đóng đăng ký sau"
+      expiredMessage="Đã hết hạn đăng ký"
+    />
+  </div>
+)}
 
               <h3 className="text-xl font-bold text-gray-900 mb-2 border-t border-gray-100 pt-6">Thông tin đăng ký</h3>
               <div className="flex justify-between items-end py-4 border-b border-gray-100 mb-6">
