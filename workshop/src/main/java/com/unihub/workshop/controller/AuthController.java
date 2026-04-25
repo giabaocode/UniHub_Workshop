@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.unihub.workshop.controller.dto.GoogleLoginRequest;
+import com.unihub.workshop.controller.dto.GithubLoginRequest;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -28,5 +31,15 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> authenticate(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.authenticate(request));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleAuthenticate(@RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.googleAuthenticate(request));
+    }
+
+    @PostMapping("/github")
+    public ResponseEntity<AuthResponse> githubAuthenticate(@RequestBody GithubLoginRequest request) {
+        return ResponseEntity.ok(authService.githubAuthenticate(request));
     }
 }

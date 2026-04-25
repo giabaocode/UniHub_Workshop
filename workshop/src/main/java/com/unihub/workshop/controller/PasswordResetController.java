@@ -34,13 +34,16 @@ public class PasswordResetController {
     @Transactional
     public ResponseEntity<?> requestPasswordReset() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(Map.of("message", "Vui lòng đăng nhập"));
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            return ResponseEntity.status(401).body(Map.of("message", "Vui lòng đăng nhập để thực hiện chức năng này"));
         }
 
         String email = authentication.getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("message", "Không tìm thấy người dùng: " + email));
+        }
+        User user = userOpt.get();
 
         // Delete old token if exists
         tokenRepository.deleteByUser(user);

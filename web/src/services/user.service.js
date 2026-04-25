@@ -1,6 +1,5 @@
 const API_URL = 'http://localhost:8080/api/users';
 const AUTH_API_URL = 'http://localhost:8080/api/auth';
-const UPLOAD_API_URL = 'http://localhost:8080/api/upload';
 
 const getAuthHeader = () => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -78,21 +77,24 @@ const resetPassword = async (token, newPassword) => {
 };
 
 const uploadAvatar = async (file) => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
 
-    const response = await fetch(`${UPLOAD_API_URL}/avatar`, {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
-        headers: getAuthHeader(), // Do not set Content-Type, fetch will set it automatically with boundary for FormData
         body: formData,
     });
 
     const data = await response.json();
     if (!response.ok) {
-        throw new Error(data.message || 'Lỗi khi tải ảnh lên');
+        throw new Error(data.error?.message || 'Lỗi khi tải ảnh lên Cloudinary');
     }
 
-    return data;
+    return { url: data.secure_url };
 };
 
 const userService = {

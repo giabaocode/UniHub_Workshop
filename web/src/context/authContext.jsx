@@ -22,13 +22,23 @@ export const AuthProvider = ({ children }) => {
         setUser(data);
     };
 
+    const googleLogin = async (credential) => {
+        const data = await authService.googleLogin(credential);
+        setUser(data);
+    };
+
+    const githubLogin = async (code) => {
+        const data = await authService.githubLogin(code);
+        setUser(data);
+    };
+
     const logout = () => {
         authService.logout();
         setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, updateUser, login, register, logout }}>
+        <AuthContext.Provider value={{ user, updateUser, login, googleLogin, githubLogin, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

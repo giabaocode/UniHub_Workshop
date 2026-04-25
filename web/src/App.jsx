@@ -14,6 +14,7 @@ import AdminLayout from './components/AdminLayout';
 import NotFound from './pages/NotFound';
 import AuthPage from './pages/AuthPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import GithubCallback from './pages/GithubCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import { AuthProvider } from './context/authContext';
@@ -36,6 +37,7 @@ function App() {
           {/* Route không có header */}
           <Route path="/login" element={<AuthPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/auth/github/callback" element={<GithubCallback />} />
           
           {/* Các route có header */}
           <Route path="/" element={<MainLayout><StudentHome /></MainLayout>} />
