@@ -12,15 +12,16 @@ export const AuthProvider = ({ children }) => {
             setUser(currentUser);
         }
     }, []);
-
     const login = async (email, password) => {
         const data = await authService.login(email, password);
         setUser(data);
+        return data; // <--- THÊM DÒNG NÀY ĐỂ TRANG AUTHPAGE BIẾT LÀ AI ĐANG ĐĂNG NHẬP
     };
 
-    const register = async (fullName, email, password) => {
-        const data = await authService.register(fullName, email, password);
+    const register = async (fullName, email, password, studentId, faculty) => {
+        const data = await authService.register(fullName, email, password, studentId, faculty);
         setUser(data);
+        return data; // <--- Thêm luôn cho đồng bộ
     };
 
     const logout = () => {

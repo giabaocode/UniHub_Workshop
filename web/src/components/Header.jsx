@@ -90,8 +90,7 @@ const Header = () => {
                       {user.fullName}
                     </p>
                     <p className="text-[11px] font-medium text-gray-400 line-clamp-1 uppercase tracking-wider">
-                      {user.role === 'ADMIN' ? 'Quản trị viên' : 'Sinh viên'}
-                    </p>
+                      {user?.role?.trim() === 'ADMIN' ? 'Quản trị viên' : 'Sinh viên'}                    </p>
                   </div>
                 </Link>
 

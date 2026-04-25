@@ -7,14 +7,17 @@ import userService from '../services/user.service';
 const UserProfile = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, updateUser } = useContext(AuthContext);
+  const { logout, updateUser, user } = useContext(AuthContext);
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isAdmin = isAdminRoute || user?.role?.trim() === 'ADMIN';
 
   const [profile, setProfile] = useState({
     fullName: '',
     email: '',
     phoneNumber: '',
-    avatarUrl: ''
+    avatarUrl: '',
+    studentId: '',
+    faculty: ''
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +40,9 @@ const UserProfile = () => {
           fullName: data.fullName || '',
           email: data.email || '',
           phoneNumber: data.phoneNumber || '',
-          avatarUrl: data.avatarUrl || ''
+          avatarUrl: data.avatarUrl || '',
+          studentId: data.studentId || '',
+          faculty: data.faculty || ''
         });
       } catch (error) {
         setMessage({ type: 'error', text: 'Không thể tải thông tin cá nhân.' });
@@ -222,6 +227,19 @@ const UserProfile = () => {
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Số điện thoại</label>
                 <input type="tel" name="phoneNumber" value={profile.phoneNumber} onChange={handleInputChange} placeholder="Nhập số điện thoại..." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white font-medium" />
               </div>
+              {!isAdmin && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">MSSV</label>
+                    <input type="text" name="studentId" value={profile.studentId} onChange={handleInputChange} placeholder="SE123456" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Khoa</label>
+                    <input type="text" name="faculty" value={profile.faculty} onChange={handleInputChange} placeholder="Công nghệ thông tin" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white font-medium" />
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end pt-4">
                 <button onClick={handleSaveProfile} disabled={isSaving} className="flex items-center gap-2 px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50">
                   <Save size={18} />
