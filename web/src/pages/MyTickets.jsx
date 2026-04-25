@@ -1,38 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Calendar, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Ticket as TicketIcon } from 'lucide-react';
+import ticketService from '../services/ticket.service';
 
 const MyTickets = () => {
-  const tickets = [
-    {
-      id: "TICK-837492",
-      title: "Kỹ năng phỏng vấn xin việc cho sinh viên IT",
-      speaker: "Nguyễn Văn A",
-      date: "25/04/2026",
-      time: "08:00 - 11:30",
-      room: "Hội trường lớn",
-      status: "Sắp diễn ra",
-      qrValue: "TICK-837492"
-    },
-    {
-      id: "TICK-992384",
-      title: "Định hướng nghề nghiệp Data Science 2026",
-      speaker: "Trần Thị B",
-      date: "26/04/2026",
-      time: "13:30 - 16:30",
-      room: "Phòng A102",
-      status: "Đã xác nhận",
-      qrValue: "TICK-992384"
-    }
-  ];
+  const [tickets, setTickets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const data = await ticketService.getMyTickets();
+        setTickets(data);
+      } catch (err) {
+        setError(err.message || 'Lỗi khi tải danh sách vé');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, []);
+
 
   return (
     <div className="min-h-screen bg-gray-100 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Vé của tôi</h1>
         
-        <div className="space-y-6">
-          {tickets.map(ticket => (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-center">
+            {error}
+          </div>
+        ) : tickets.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm p-12 text-center border border-gray-200 flex flex-col items-center">
+            <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
+              <TicketIcon size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Bạn chưa có vé nào</h3>
+            <p className="text-gray-500 max-w-md">Hãy tìm hiểu các workshop đang mở đăng ký và đăng ký tham gia ngay nhé.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {tickets.map(ticket => (
             <div key={ticket.id} className="relative bg-white rounded-2xl shadow-sm flex flex-col md:flex-row overflow-hidden border border-gray-200">
               {/* Ticket cut corner effect - Left */}
               <div className="absolute top-1/2 -left-3 w-6 h-6 bg-gray-100 rounded-full transform -translate-y-1/2 hidden md:block border-r border-gray-200"></div>
@@ -86,7 +101,8 @@ const MyTickets = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

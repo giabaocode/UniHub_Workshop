@@ -1,10 +1,15 @@
 package com.unihub.workshop.entity;
 
 import jakarta.persistence.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "users") // Use 'users' as 'user' is a reserved keyword in PostgreSQL
-public class User {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +27,9 @@ public class User {
     private String authProvider;
     private String providerId;
     private String avatarUrl;
+    
+    @Column(name = "phone_number")
+    private String phoneNumber;
 
     public User() {
     }
@@ -33,7 +41,7 @@ public class User {
         this.role = role;
     }
 
-    public User(String fullName, String email, String password, String role, String authProvider, String providerId, String avatarUrl) {
+    public User(String fullName, String email, String password, String role, String authProvider, String providerId, String avatarUrl, String phoneNumber) {
         this.fullName = fullName;
         this.email = email;
         this.password = password;
@@ -41,6 +49,7 @@ public class User {
         this.authProvider = authProvider;
         this.providerId = providerId;
         this.avatarUrl = avatarUrl;
+        this.phoneNumber = phoneNumber;
     }
 
     public Long getId() {
@@ -105,5 +114,43 @@ public class User {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_" + (role != null ? role.toUpperCase() : "USER")));
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
     }
 }
