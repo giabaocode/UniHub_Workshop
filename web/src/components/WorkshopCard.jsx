@@ -80,8 +80,8 @@ const WorkshopCard = ({ workshop }) => {
           <div className="mb-5">
             <div className="flex justify-between text-xs font-bold mb-2 uppercase tracking-wider">
               <span className="text-gray-500">Tình trạng vé</span>
-              <span className={isFull ? "text-gray-500" : (isAlmostFull ? "text-red-500" : "text-blue-600")}>
-                {isFull ? "Đã bán hết" : `${bookedSpots}/${workshop.totalSeats} vé`}
+              <span className={isFull ? "text-red-600 font-bold" : (isAlmostFull ? "text-red-600 font-bold animate-pulse" : "text-blue-600 font-bold")}>
+                {isFull ? "ĐÃ BÁN HẾT" : `Chỉ còn ${spotsLeft} chỗ`}
               </span>
             </div>
             <div className="w-full bg-gray-200/50 rounded-full h-2.5 overflow-hidden backdrop-blur-sm">

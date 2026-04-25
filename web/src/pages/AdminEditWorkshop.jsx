@@ -17,10 +17,13 @@ const AdminEditWorkshop = () => {
     });
     const [errors, setErrors] = useState({});
     const navigate = useNavigate();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const { id } = useParams();
 
     useEffect(() => {
         const fetchDetail = async () => {
+            setIsLoading(true);
             try {
                 const data = await workshopService.getWorkshopById(id);
                 setFormData({
@@ -41,6 +44,8 @@ const AdminEditWorkshop = () => {
                 console.error('Error fetching workshop detail:', error);
                 alert("Không thể tải thông tin Workshop!");
                 navigate('/admin');
+            } finally {
+                setIsLoading(false);
             }
         }
         fetchDetail();
@@ -64,6 +69,7 @@ const AdminEditWorkshop = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
         const newErrors = {};
 
         if (!formData.coverImageUrl) newErrors.coverImageUrl = 'Vui lòng tải lên ảnh bìa cho sự kiện!';
@@ -97,13 +103,25 @@ const AdminEditWorkshop = () => {
         };
 
         try {
+            setIsSubmitting(true);
+
             await workshopService.updateWorkshop(id, payload);
             alert("Cập nhật Workshop thành công!");
             navigate("/admin");
         } catch (error) {
             alert("Lỗi: " + error.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40">
+                <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
+                <p className="text-gray-500 font-medium">Đang tải dữ liệu sự kiện...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
@@ -181,9 +199,22 @@ const AdminEditWorkshop = () => {
             </div>
 
             <div className="flex justify-end items-center gap-4 pt-4">
-                <button onClick={() => navigate('/admin')} className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all">Hủy</button>
-                {/* FIX: Đổi text nút bấm */}
-                <button onClick={handleSubmit} className="px-8 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">Cập nhật thay đổi</button>
+                <button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    className={`px-8 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2
+          ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700 hover:-translate-y-0.5 shadow-blue-500/30'}
+      `}
+                >
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="animate-spin" size={18} />
+                            Đang xử lý...
+                        </>
+                    ) : (
+                        'Cập nhật thay đổi'
+                    )}
+                </button>
             </div>
         </div>
     );

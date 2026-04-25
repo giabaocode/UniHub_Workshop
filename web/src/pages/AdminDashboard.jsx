@@ -10,6 +10,7 @@ const AdminDashboard = () => {
   // STATE CHO SEARCH VÀ PHÂN TRANG
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
   const itemsPerPage = 5;
 
   // --- MỚI: STATE QUẢN LÝ POPUP XÓA ---
@@ -39,20 +40,17 @@ const AdminDashboard = () => {
 
   // BƯỚC 2: BẤM "XÓA VĨNH VIỄN" TRONG POPUP -> GỌI API
   const confirmDelete = async () => {
+    if (isDeleting) return; // Đang xóa thì cấm bấm tiếp
+    setIsDeleting(true);
     try {
       await workshopService.deleteWorkshop(deleteModal.id);
       setWorkshops(prev => prev.filter(ws => ws.id !== deleteModal.id));
-
-      // Lùi trang nếu xóa phần tử cuối cùng
-      if (currentWorkshops.length === 1 && currentPage > 1) {
-        setCurrentPage(prev => prev - 1);
-      }
-
-      // Đóng popup
+      if (currentWorkshops.length === 1 && currentPage > 1) setCurrentPage(prev => prev - 1);
       setDeleteModal({ isOpen: false, id: null, name: '' });
     } catch (error) {
       alert("Lỗi khi xóa: " + (error.message || "Không xác định"));
-      setDeleteModal({ isOpen: false, id: null, name: '' });
+    } finally {
+      setIsDeleting(false); // Trả lại trạng thái
     }
   };
 
@@ -204,9 +202,10 @@ const AdminDashboard = () => {
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-6 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl shadow-lg shadow-red-500/30 transition-all transform hover:-translate-y-0.5 sm:w-auto w-full"
+                disabled={isDeleting}
+                className={`px-6 py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl shadow-lg transition-all sm:w-auto w-full flex items-center justify-center gap-2 ${isDeleting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600 hover:-translate-y-0.5 shadow-red-500/30'}`}
               >
-                Xóa vĩnh viễn
+                {isDeleting ? <Loader2 className="animate-spin" size={18} /> : 'Xóa vĩnh viễn'}
               </button>
             </div>
           </div>

@@ -13,6 +13,7 @@ const AdminWorkshopAttendees = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [processingIds, setProcessingIds] = useState([]);
   const itemsPerPage = 10;
 
   // GỌI API LẤY DỮ LIỆU KHI VÀO TRANG
@@ -38,6 +39,8 @@ const AdminWorkshopAttendees = () => {
 
   // LOGIC CHECK-IN THẬT SỰ GỌI XUỐNG DB
   const handleCheckIn = async (attendeeId) => {
+    if (processingIds.includes(attendeeId)) return;
+    setProcessingIds(prev => [...prev, attendeeId]);
     try {
       // Gọi API cập nhật trạng thái Check-in (Cần viết thêm hàm này ở Service)
       await workshopService.checkInAttendee(attendeeId);
@@ -48,6 +51,8 @@ const AdminWorkshopAttendees = () => {
       ));
     } catch (error) {
       alert("Lỗi Check-in: " + (error.message || "Không xác định"));
+    } finally {
+      setProcessingIds(prev => prev.filter(id => id !== attendeeId))
     }
   };
 
@@ -96,10 +101,6 @@ const AdminWorkshopAttendees = () => {
             Danh sách tham dự: <span className="text-blue-600">{workshop?.title || `Workshop #${id}`}</span>
           </h1>
           <div className="flex gap-2">
-            <button className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors border border-gray-200 shadow-sm text-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-              Nhập CSV
-            </button>
             <button className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 font-bold rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200 shadow-sm text-sm">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               Xuất CSV
@@ -204,9 +205,19 @@ const AdminWorkshopAttendees = () => {
                       {!attendee.isCheckedIn ? (
                         <button
                           onClick={() => handleCheckIn(attendee.id)}
-                          className="inline-flex items-center justify-center px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-all transform hover:-translate-y-0.5 whitespace-nowrap"
+                          disabled={processingIds.includes(attendee.id)} // Khóa nút nếu ID đang nằm trong mảng
+                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-lg transition-all transform whitespace-nowrap
+        ${processingIds.includes(attendee.id)
+                              ? 'bg-blue-400 cursor-not-allowed'
+                              : 'bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-500/20 hover:-translate-y-0.5'
+                            }`}
                         >
-                          Check-in
+                          {/* Hiện icon xoay xoay nếu đang xử lý */}
+                          {processingIds.includes(attendee.id) ? (
+                            <><Loader2 size={14} className="animate-spin" /> Đang xử lý</>
+                          ) : (
+                            'Check-in'
+                          )}
                         </button>
                       ) : (
                         <span className="inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-gray-400 bg-gray-50 rounded-lg border border-gray-100 cursor-not-allowed">

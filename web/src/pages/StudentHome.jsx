@@ -123,17 +123,20 @@ const StudentHome = () => {
               {/* PHÂN TRANG */}
               {totalPages > 1 && (
                 <div className="flex justify-center items-center mt-12 gap-2">
-                  <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
+                  <button onClick={() => {
+                    setCurrentPage(prev => Math.max(prev - 1, 1));
+                    scrollToWorkshops();
+                  }} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
                     <ChevronLeft size={18} />
                   </button>
                   <div className="flex gap-2">
                     {Array.from({ length: totalPages }).map((_, i) => (
-                      <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all shadow-sm ${currentPage === i + 1 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      <button key={i} onClick={() => { setCurrentPage(i + 1); scrollToWorkshops(); }} className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all shadow-sm ${currentPage === i + 1 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                         {i + 1}
                       </button>
                     ))}
                   </div>
-                  <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
+                  <button onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); scrollToWorkshops(); }} disabled={currentPage === totalPages} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
                     <ChevronRight size={18} />
                   </button>
                 </div>

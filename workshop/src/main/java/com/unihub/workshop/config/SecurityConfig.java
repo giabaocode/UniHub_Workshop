@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/workshops/**").permitAll() // Allow viewing workshops
                         .requestMatchers("/uploads/**").permitAll() 
-                        .requestMatchers("/error").permitAll() // <--- THÊM DÒNG NÀY VÀO ĐỂ HIỆN LỖI THẬT// Allow serving uploaded files
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
