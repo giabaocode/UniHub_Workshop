@@ -1,92 +1,107 @@
-import React, { useState } from 'react';
-import { X, Loader2, CheckCircle2 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import React, { useState, useEffect } from 'react';
+import { X, Loader2, CheckCircle2, Copy, Check, AlertCircle } from 'lucide-react';
+import ticketService from '../services/ticket.service';
 
-const CheckoutModal = ({ isOpen, onClose, workshopTitle, price }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
+const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId }) => {
   const [isSuccess, setIsSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  if (!isOpen) return null;
+  // Cơ chế tự động kiểm tra trạng thái vé (Polling)
+  // Cơ chế tự động kiểm tra trạng thái vé (Polling)
+  useEffect(() => {
+    // Nếu modal không mở hoặc không có workshopId thì không làm gì
+    if (!isOpen || isSuccess) return;
 
-  const handlePayment = () => {
-    setIsProcessing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        onClose();
-        setIsSuccess(false);
-      }, 2000);
-    }, 2000);
-  };
+    const interval = setInterval(async () => {
+      try {
+        // Hỏi Backend xem có vé chưa
+        const res = await ticketService.checkRegistration(workshopId);
+        
+        // In ra để bạn nhìn thấy tận mắt cú lừa của JS
+        console.log("Kết quả từ Backend:", res);
+
+        // ĐÂY LÀ ĐIỂM CHỐT HẠ: Phải kiểm tra chính xác biến isRegistered bên trong res
+        if (res.isRegistered === true) {
+          setIsSuccess(true);
+          clearInterval(interval);
+          
+          // Đóng modal sau khi hiện thành công 3 giây
+          setTimeout(() => {
+            onClose();
+            window.location.reload(); 
+          }, 3000);
+        }
+      } catch (error) {
+        console.log("Đang chờ thanh toán...");
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, workshopId, isSuccess, onClose]);
+
+  if (!isOpen || !paymentData) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={!isProcessing ? onClose : undefined}
-      ></div>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onClose}></div>
       
-      {/* Modal Content */}
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        <button 
-          onClick={onClose}
-          disabled={isProcessing}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-        >
-          <X size={24} />
-        </button>
-
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
         <div className="p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Thanh toán vé</h2>
-          
           {isSuccess ? (
-            <div className="flex flex-col items-center justify-center py-8">
-              <CheckCircle2 size={64} className="text-emerald-500 mb-4 animate-bounce" />
-              <p className="text-xl font-bold text-gray-900">Thanh toán thành công!</p>
-              <p className="text-gray-500 mt-2 text-center">Vé đã được xác nhận thành công.</p>
+            <div className="flex flex-col items-center justify-center py-10 text-center animate-in zoom-in">
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 size={48} className="text-emerald-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">Thanh toán thành công!</h3>
+              <p className="text-gray-500 mt-2">Hệ thống đã xác nhận vé của bạn.</p>
             </div>
           ) : (
             <>
-              {/* Order Summary */}
-              <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100">
-                <p className="text-sm text-gray-500 mb-1">Sự kiện</p>
-                <p className="font-semibold text-gray-900 mb-3">{workshopTitle}</p>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2 text-center">Quét mã thanh toán</h2>
+              
+              {/* Hiệu ứng chờ đợi */}
+              <div className="flex items-center justify-center gap-2 mb-6 text-blue-600">
+                <Loader2 className="animate-spin" size={18} />
+                <span className="text-sm font-semibold animate-pulse">Đang chờ tín hiệu từ ngân hàng...</span>
+              </div>
+
+              {/* QR Code */}
+              <div className="flex flex-col items-center mb-6">
+                <div className="p-3 bg-white border-2 border-blue-100 rounded-2xl shadow-inner mb-4">
+                  <img src={paymentData.qrUrl} alt="Payment QR" className="w-52 h-52 object-contain" />
+                </div>
                 
-                <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                  <span className="text-gray-600 font-medium">Tổng tiền:</span>
-                  <span className="text-2xl font-extrabold text-blue-600">{price}</span>
+                <div className="w-full space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Nội dung</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(paymentData.memo);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="flex items-center gap-1.5 text-blue-600 font-bold"
+                    >
+                      <span className="font-mono">{paymentData.memo}</span>
+                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* QR Code Fake */}
-              <div className="flex flex-col items-center mb-8">
-                <p className="text-sm font-medium text-gray-500 mb-3">Quét mã QR bằng ứng dụng ngân hàng</p>
-                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200">
-                  <QRCodeSVG value={`payment-${workshopTitle}-${price}`} size={160} level="H" />
-                </div>
+              <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 mb-8 flex gap-3">
+                <AlertCircle className="text-amber-500 shrink-0" size={18} />
+                <p className="text-[11px] text-amber-700 leading-tight">
+                  Vui lòng không đóng cửa sổ này. Sau khi bạn chuyển khoản thành công, hệ thống sẽ tự động chuyển trang.
+                </p>
               </div>
 
-              {/* Confirm Button */}
+              {/* Chỉ có nút Huỷ */}
               <button
-                onClick={handlePayment}
-                disabled={isProcessing}
-                className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center transition-all ${
-                  isProcessing 
-                    ? 'bg-blue-400 text-white cursor-not-allowed opacity-80' 
-                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transform hover:-translate-y-1'
-                }`}
+                onClick={onClose}
+                className="w-full py-4 text-gray-400 font-bold hover:text-red-500 transition-all border-2 border-transparent hover:border-red-100 rounded-2xl"
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="animate-spin mr-2" size={24} />
-                    Đang xử lý...
-                  </>
-                ) : (
-                  'Xác nhận thanh toán'
-                )}
+                Huỷ giao dịch
               </button>
             </>
           )}

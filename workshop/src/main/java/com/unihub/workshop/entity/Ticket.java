@@ -3,36 +3,40 @@ package com.unihub.workshop.entity;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "tickets") // Tên bảng trong Database
 public class Ticket {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(nullable = false, unique = true)
     private String ticketCode;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "workshop_id")
+    @JoinColumn(name = "workshop_id", nullable = false)
     private Workshop workshop;
 
-    private String paymentStatus;
-    private Boolean checkInStatus;
+    @Column(nullable = false)
+    private boolean isScanned = false; // Mặc định là chưa quét (check-in)
 
+    // 1. Constructor rỗng (Bắt buộc phải có cho Spring JPA)
     public Ticket() {
     }
 
-    public Ticket(String ticketCode, User user, Workshop workshop, String paymentStatus, Boolean checkInStatus) {
+    // 2. Constructor với 4 tham số (Đây chính là cái để sửa lỗi Undefined)
+    public Ticket(String ticketCode, User user, Workshop workshop, boolean isScanned) {
         this.ticketCode = ticketCode;
         this.user = user;
         this.workshop = workshop;
-        this.paymentStatus = paymentStatus;
-        this.checkInStatus = checkInStatus;
+        this.isScanned = isScanned;
     }
 
+    // --- GETTERS & SETTERS ---
     public Long getId() {
         return id;
     }
@@ -65,19 +69,11 @@ public class Ticket {
         this.workshop = workshop;
     }
 
-    public String getPaymentStatus() {
-        return paymentStatus;
+    public boolean isScanned() {
+        return isScanned;
     }
 
-    public void setPaymentStatus(String paymentStatus) {
-        this.paymentStatus = paymentStatus;
-    }
-
-    public Boolean getCheckInStatus() {
-        return checkInStatus;
-    }
-
-    public void setCheckInStatus(Boolean checkInStatus) {
-        this.checkInStatus = checkInStatus;
+    public void setScanned(boolean scanned) {
+        isScanned = scanned;
     }
 }

@@ -22,6 +22,7 @@ const WorkshopDetail = () => {
   const [aiHashtags, setAiHashtags] = useState([]);
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState('');
+  const [paymentData, setPaymentData] = useState(null);
 
   // Fetch workshop data from API
   useEffect(() => {
@@ -81,35 +82,32 @@ const WorkshopDetail = () => {
   };
 
   const handleRegisterClick = async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user || !user.token) {
-        alert("Vui lòng đăng nhập để đăng ký Workshop!");
-        // Có thể navigate('/login') ở đây
-        return;
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (!user || !user.token) {
+    alert("Vui lòng đăng nhập để đăng ký!");
+    return;
+  }
+setIsWaiting(true);
+  try {
+    const result = await ticketService.registerWorkshop(id);
+    
+    if (result.status === 'FREE_SUCCESS') {
+      // Chỉ với vé miễn phí mới set cái này
+      setIsRegistered(true); 
+      alert('Đăng ký thành công!');
+      navigate('/my-tickets');
+    } else if (result.status === 'REQUIRE_PAYMENT') {
+      // Với vé có phí, KHÔNG ĐƯỢC set isRegistered = true ở đây
+      // Vì người dùng mới chỉ bắt đầu bước thanh toán thôi
+      setPaymentData(result);
+      setIsModalOpen(true);
     }
-
-    if (isRegistered) {
-        navigate('/my-tickets'); // Đã đăng ký -> nhảy sang trang vé
-        return;
-    }
-
-    setIsWaiting(true);
-    try {
-        const result = await ticketService.registerWorkshop(id);
-        
-        if (result.status === 'FREE_SUCCESS') {
-            setIsRegistered(true);
-            alert('Đăng ký thành công! Vé đã được lưu vào "Vé của tôi".');
-            navigate('/my-tickets');
-        } else if (result.status === 'REQUIRE_PAYMENT') {
-            setIsModalOpen(true);
-        }
-    } catch (error) {
-        alert(error.message);
-    } finally {
-        setIsWaiting(false);
-    }
-  };
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setIsWaiting(false);
+  }
+};
   // Loading state
   if (isLoading) {
     return (
@@ -416,12 +414,14 @@ const formatBoldText = (text) => {
         </div>
       </div>
 
-      <CheckoutModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        workshopTitle={workshop.title}
-        price={formatPrice(workshop.price)}
-      />
+      {/* Sửa lại đoạn này */}
+<CheckoutModal
+  isOpen={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  workshopTitle={workshop.title}
+  paymentData={paymentData} 
+  workshopId={id}
+/>
 
       {/* Waiting Queue Overlay */}
       {isWaiting && (

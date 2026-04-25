@@ -31,6 +31,12 @@ public class TicketController {
         this.ticketService = ticketService;
     }
 
+    @GetMapping("/status/{ticketCode}")
+    public ResponseEntity<Map<String, String>> checkPaymentStatus(@PathVariable String ticketCode) {
+        String status = ticketService.checkTicketStatus(ticketCode);
+        return ResponseEntity.ok(Map.of("status", status));
+    }
+
     @GetMapping("/my-tickets")
     public ResponseEntity<List<Map<String, Object>>> getMyTickets() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -46,9 +52,8 @@ public class TicketController {
             Workshop ws = ticket.getWorkshop();
             Map<String, Object> map = new HashMap<>();
             
-            String status = "Chờ thanh toán";
-            if (Boolean.TRUE.equals(ticket.getCheckInStatus())) status = "Đã tham gia";
-            else if ("PAID".equalsIgnoreCase(ticket.getPaymentStatus())) status = "Đã xác nhận";
+            // ĐÃ SỬA: Vé nằm trong DB là "Đã xác nhận", nếu quét QR check-in rồi thì "Đã tham gia"
+            String status = ticket.isScanned() ? "Đã tham gia" : "Đã xác nhận";
 
             // Map chính xác với các biến bên MyTickets.jsx
             map.put("workshopId", ws.getId());
@@ -73,18 +78,15 @@ public class TicketController {
         return ResponseEntity.ok(Map.of("isRegistered", isRegistered));
     }
 
-    // Sửa lại API đăng ký trong TicketController.java
-@PostMapping("/register/{workshopId}")
-public ResponseEntity<?> registerWorkshop(@PathVariable Long workshopId) {
-    try {
-        String result = ticketService.registerWorkshop(workshopId);
-        
-        // ĐÚNG: Luôn trả về Map.of để nó biến thành {"status": "FREE_SUCCESS"}
-        return ResponseEntity.ok(Map.of("status", result)); 
-        
-    } catch (RuntimeException e) {
-        // ĐÚNG: Trả về Map.of cho lỗi {"error": "..."}
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    @PostMapping("/register/{workshopId}")
+    public ResponseEntity<Map<String, Object>> registerWorkshop(@PathVariable Long workshopId) {
+        try {
+            // Gọi service và nhận về Map chứa status, qrUrl, memo...
+            Map<String, Object> result = ticketService.registerWorkshop(workshopId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            // Trả về lỗi dưới dạng JSON để Frontend dễ xử lý
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
-}
 }

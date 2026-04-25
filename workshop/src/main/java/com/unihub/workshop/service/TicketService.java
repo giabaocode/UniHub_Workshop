@@ -10,6 +10,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -18,6 +20,12 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final WorkshopRepository workshopRepository;
+    
+    public String checkTicketStatus(String ticketCode) {
+    Ticket ticket = ticketRepository.findByTicketCode(ticketCode)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy vé"));
+    return "PAID";
+}
 
     public TicketService(TicketRepository ticketRepository, UserRepository userRepository, WorkshopRepository workshopRepository) {
         this.ticketRepository = ticketRepository;
@@ -32,34 +40,43 @@ public class TicketService {
     }
 
     public boolean isUserRegistered(Long workshopId) {
-        User user = getCurrentUser();
-        Workshop workshop = workshopRepository.findById(workshopId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop"));
-        return ticketRepository.existsByUserAndWorkshop(user, workshop);
+    User user = getCurrentUser();
+    Workshop workshop = workshopRepository.findById(workshopId).orElseThrow();
+    
+    // Cực kỳ đơn giản: Có trong DB = Đã mua, Không có = Chưa mua
+    return ticketRepository.existsByUserAndWorkshop(user, workshop);
+}
+    public Map<String, Object> registerWorkshop(Long workshopId) {
+    User user = getCurrentUser();
+    Workshop workshop = workshopRepository.findById(workshopId).orElseThrow();
+
+    if (isUserRegistered(workshopId)) {
+        throw new RuntimeException("Bạn đã sở hữu vé cho sự kiện này!");
     }
 
-    public String registerWorkshop(Long workshopId) {
-        User user = getCurrentUser();
-        Workshop workshop = workshopRepository.findById(workshopId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop"));
+    // Tạo mã định danh ngụy trang: TK-{UserID}-{WorkshopID}-{Random}
+   String randomStr = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+    String ticketCode = String.format("TK%04d%04d%s", user.getId(), workshop.getId(), randomStr);
+    
+    Map<String, Object> response = new HashMap<>();
 
-        if (ticketRepository.existsByUserAndWorkshop(user, workshop)) {
-            throw new RuntimeException("Bạn đã đăng ký sự kiện này rồi!");
-        }
+    if (workshop.getPrice() == null || workshop.getPrice() == 0) {
+        // Vé MIỄN PHÍ: Tạo và lưu luôn
+        Ticket ticket = new Ticket(ticketCode, user, workshop, false);
+        ticketRepository.save(ticket);
+        response.put("status", "FREE_SUCCESS");
+    } else {
+        // Vé CÓ PHÍ: CHỈ trả về thông tin quét QR, KHÔNG LƯU VÀO DB!
+        String qrUrl = String.format(
+            "https://qr.sepay.vn/img?acc=%s&bank=%s&amount=%s&des=%s",
+            "0396660219", "MBBank", workshop.getPrice().intValue(), ticketCode
+        );
 
-        String ticketCode = "TK-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-
-        if (workshop.getPrice() == null || workshop.getPrice() == 0) {
-            Ticket ticket = new Ticket();
-            ticket.setTicketCode(ticketCode);
-            ticket.setUser(user);
-            ticket.setWorkshop(workshop);
-            ticket.setPaymentStatus("PAID");
-            ticket.setCheckInStatus(false);
-            ticketRepository.save(ticket);
-            return "FREE_SUCCESS";
-        } else {
-            return "REQUIRE_PAYMENT";
-        }
+        response.put("status", "REQUIRE_PAYMENT");
+        response.put("amount", workshop.getPrice());
+        response.put("memo", ticketCode);
+        response.put("qrUrl", qrUrl);
     }
+    return response;
+}
 }
