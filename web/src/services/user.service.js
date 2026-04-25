@@ -59,6 +59,24 @@ const requestPasswordReset = async () => {
     return data;
 };
 
+const forgotPassword = async (email) => {
+    const response = await fetch(`${AUTH_API_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    });
+
+    // Safely parse JSON — body may be empty on some errors
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+        throw new Error(data.message || `Lỗi ${response.status}: Vui lòng thử lại sau.`);
+    }
+
+    return data;
+};
+
 const resetPassword = async (token, newPassword) => {
     const response = await fetch(`${AUTH_API_URL}/reset-password`, {
         method: 'POST',
@@ -101,6 +119,7 @@ const userService = {
     getProfile,
     updateProfile,
     requestPasswordReset,
+    forgotPassword,
     resetPassword,
     uploadAvatar
 };

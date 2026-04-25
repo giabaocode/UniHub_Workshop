@@ -3,6 +3,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Home, ArrowLeft, KeyRound } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { AuthContext } from '../context/authContext';
+import userService from '../services/user.service';
 
 const AuthPage = () => {
   const location = useLocation();
@@ -19,6 +20,9 @@ const AuthPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState({ type: '', text: '' });
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,7 +122,28 @@ const AuthPage = () => {
             </div>
           </form>
         ) : isForgotPassword ? (
-          <form className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setIsForgotLoading(true);
+            setForgotMessage({ type: '', text: '' });
+            try {
+              const res = await userService.forgotPassword(forgotEmail);
+              setForgotMessage({ type: 'success', text: res.message });
+            } catch (err) {
+              setForgotMessage({ type: 'error', text: err.message });
+            } finally {
+              setIsForgotLoading(false);
+            }
+          }} className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
+            {forgotMessage.text && (
+              <div className={`p-3 rounded-lg text-sm text-center font-medium border ${
+                forgotMessage.type === 'success'
+                  ? 'bg-green-50 text-green-700 border-green-100'
+                  : 'bg-red-50 text-red-600 border-red-100'
+              }`}>
+                {forgotMessage.text}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
               <div className="relative">
@@ -126,7 +151,10 @@ const AuthPage = () => {
                   <Mail className="text-gray-400" size={18} />
                 </div>
                 <input 
-                  type="email" 
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  required
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
                   placeholder="sv@student.edu.vn"
                 />
@@ -134,10 +162,11 @@ const AuthPage = () => {
             </div>
             
             <button 
-              type="button" 
-              className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 mt-2"
+              type="submit"
+              disabled={isForgotLoading || forgotMessage.type === 'success'}
+              className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Gửi link khôi phục
+              {isForgotLoading ? 'Đang gửi...' : 'Gửi link khôi phục'}
             </button>
             
             <div className="mt-6 text-center">
