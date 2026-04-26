@@ -17,4 +17,5 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     // Thêm dòng này vào TicketRepository.java
 Optional<Ticket> findByTicketCode(String ticketCode);
 
+    List<Ticket> findByWorkshopId(Long workshopId);
 }

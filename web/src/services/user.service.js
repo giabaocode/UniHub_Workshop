@@ -1,5 +1,6 @@
-const API_URL = 'http://localhost:8080/api/users';
-const AUTH_API_URL = 'http://localhost:8080/api/auth';
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/users`;
+const AUTH_API_URL = `${import.meta.env.VITE_API_BASE_URL}/auth`;
+const UPLOAD_API_URL = `${import.meta.env.VITE_API_BASE_URL}/upload`;
 
 const getAuthHeader = () => {
     const user = JSON.parse(localStorage.getItem('user'));

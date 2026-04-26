@@ -31,6 +31,7 @@ import java.util.List;
 
 @Service
 public class AuthService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -63,11 +64,23 @@ public class AuthService {
                 passwordEncoder.encode(request.getPassword()),
                 "USER"
         );
+        user.setStudentId(request.getStudentId());
+        user.setFaculty(request.getFaculty());
 
         userRepository.save(user);
+
         String jwtToken = jwtService.generateToken(user);
 
-        return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+        return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
     }
 
     public AuthResponse authenticate(LoginRequest request) {
@@ -83,7 +96,16 @@ public class AuthService {
 
         String jwtToken = jwtService.generateToken(user);
 
-        return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+        return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
     }
 
     public AuthResponse googleAuthenticate(GoogleLoginRequest request) {
@@ -123,7 +145,16 @@ public class AuthService {
                 }
 
                 String jwtToken = jwtService.generateToken(user);
-                return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+                return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
             } else {
                 throw new RuntimeException("Invalid Google token.");
             }
@@ -228,7 +259,16 @@ public class AuthService {
             }
 
             String jwtToken = jwtService.generateToken(user);
-            return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+            return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
 
         } catch (Exception e) {
             throw new RuntimeException("GitHub authentication failed", e);

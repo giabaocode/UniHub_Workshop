@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { Camera, Save, Lock, LogOut, CheckCircle, AlertCircle, Mail, X, ShieldCheck } from 'lucide-react';
+import { Camera, Save, Lock, LogOut, CheckCircle, AlertCircle, Mail, X, ShieldCheck, Loader2 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/authContext';
 import userService from '../services/user.service';
@@ -7,16 +7,19 @@ import userService from '../services/user.service';
 const UserProfile = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, updateUser } = useContext(AuthContext);
+  const { logout, updateUser, user } = useContext(AuthContext);
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isAdmin = isAdminRoute || user?.role?.trim() === 'ADMIN';
 
   const [profile, setProfile] = useState({
     fullName: '',
     email: '',
     phoneNumber: '',
-    avatarUrl: ''
+    avatarUrl: '',
+    studentId: '',
+    faculty: ''
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -26,6 +29,9 @@ const UserProfile = () => {
 
   const fileInputRef = useRef(null);
 
+  const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -34,10 +40,12 @@ const UserProfile = () => {
           fullName: data.fullName || '',
           email: data.email || '',
           phoneNumber: data.phoneNumber || '',
-          avatarUrl: data.avatarUrl || ''
+          avatarUrl: data.avatarUrl || '',
+          studentId: data.studentId || '',
+          faculty: data.faculty || ''
         });
       } catch (error) {
-        setMessage({ type: 'error', text: 'Không thể tải thông tin cá nhân. Vui lòng thử lại sau.' });
+        setMessage({ type: 'error', text: 'Không thể tải thông tin cá nhân.' });
       } finally {
         setIsLoading(false);
       }
@@ -51,40 +59,52 @@ const UserProfile = () => {
   };
 
   const handleAvatarClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    if (fileInputRef.current) fileInputRef.current.click();
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Vui lòng chọn file ảnh hợp lệ.' });
+      return;
+    }
+
     setIsUploading(true);
     setMessage({ type: '', text: '' });
 
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    uploadData.append("upload_preset", UPLOAD_PRESET);
+
     try {
-      const res = await userService.uploadAvatar(file);
-      const newAvatarUrl = res.url;
-      
-      // Update local state
-      setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
-      
-      // Save to backend
-      await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+        method: "POST",
+        body: uploadData,
+      });
+      const data = await response.json();
 
-      // Sync navbar immediately
-      updateUser({ avatarUrl: newAvatarUrl });
+      if (data.secure_url) {
+        const newAvatarUrl = data.secure_url;
 
-      setMessage({ type: 'success', text: 'Đã cập nhật ảnh đại diện!' });
-      setTimeout(() => {
-        setMessage({ type: '', text: '' });
-      }, 3000);
+        setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+        updateUser({
+          fullName: profile.fullName,
+          avatarUrl: newAvatarUrl
+        });
+        await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
+
+        setMessage({ type: 'success', text: 'Cập nhật ảnh đại diện thành công!' });
+        setTimeout(() => { setMessage({ type: '', text: '' }); }, 3000);
+      } else {
+        throw new Error(data.error?.message || "Lỗi từ Cloudinary");
+      }
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Lỗi tải ảnh lên.' });
+      console.error("Upload error:", error);
+      setMessage({ type: 'error', text: 'Lỗi tải ảnh lên mây. Hãy thử lại!' });
     } finally {
       setIsUploading(false);
-      // Reset input value so the same file can be selected again if needed
       e.target.value = null;
     }
   };
@@ -94,18 +114,11 @@ const UserProfile = () => {
     setMessage({ type: '', text: '' });
     try {
       await userService.updateProfile(profile);
-
-      // Sync navbar immediately
       updateUser({ fullName: profile.fullName, avatarUrl: profile.avatarUrl });
-
       setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setMessage({ type: '', text: '' });
-      }, 3000);
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Có lỗi xảy ra khi lưu thông tin.' });
+      setMessage({ type: 'error', text: error.message || 'Lỗi khi lưu thông tin.' });
     } finally {
       setIsSaving(false);
     }
@@ -119,143 +132,115 @@ const UserProfile = () => {
       const res = await userService.forgotPassword(profile.email);
       setMessage({ type: 'success', text: res.message || 'Đã gửi email. Vui lòng kiểm tra hộp thư.' });
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Có lỗi xảy ra khi yêu cầu đổi mật khẩu.' });
+      setMessage({ type: 'error', text: 'Lỗi yêu cầu đổi mật khẩu.' });
     } finally {
       setIsResettingPassword(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-40">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <Loader2 className="animate-spin h-12 w-12 text-blue-600" />
       </div>
     );
   }
 
   const mainContent = (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 animation-fade-in">
+    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-gray-900">Hồ sơ cá nhân</h1>
         <p className="text-gray-500 mt-2">Quản lý thông tin và bảo mật tài khoản của bạn.</p>
       </div>
 
       {message.text && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
+        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
           {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           <span className="font-medium">{message.text}</span>
         </div>
       )}
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 flex flex-col md:flex-row gap-12">
-        {/* Left: Avatar & Actions */}
-        <div className="flex flex-col items-center md:w-1/3 md:border-r border-gray-100 md:pr-8 pb-4">
-          <div className="flex flex-col items-center space-y-4 w-full">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              accept="image/*" 
-              className="hidden" 
-            />
-            <div className="relative group cursor-pointer mt-4" onClick={handleAvatarClick}>
-              <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-gray-50 shadow-md">
-                <img 
-                  src={profile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName || 'User')}&background=fff&color=3b82f6&size=200`}
-                  alt="Avatar" 
-                  className={`w-full h-full object-cover ${isUploading ? 'opacity-50' : ''}`}
-                />
-              </div>
-              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Left: Avatar */}
+        <div className="flex flex-col items-center md:w-1/3 md:border-r border-gray-100 md:pr-8">
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+
+          <div className="relative group cursor-pointer mt-4" onClick={handleAvatarClick}>
+            <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-xl bg-gray-100 relative">
+              <img
+                src={profile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName || 'User')}&background=3b82f6&color=fff&size=200`}
+                alt="Avatar"
+                className={`w-full h-full object-cover transition-all duration-300 ${isUploading ? 'opacity-30 blur-sm' : 'group-hover:scale-110'}`}
+              />
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 className="animate-spin text-blue-600" size={32} />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <Camera className="text-white" size={32} />
               </div>
             </div>
-            <button 
-              onClick={handleAvatarClick}
-              disabled={isUploading}
-              className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors mb-8 disabled:opacity-50"
-            >
-              {isUploading ? 'Đang tải lên...' : 'Đổi ảnh đại diện'}
-            </button>
           </div>
 
-          <div className="w-full space-y-3 mt-auto">
+          <button onClick={handleAvatarClick} disabled={isUploading} className="mt-4 text-sm font-bold text-blue-600 hover:text-blue-700 disabled:opacity-50 transition-colors">
+            {isUploading ? 'Đang xử lý...' : 'Thay đổi ảnh đại diện'}
+          </button>
+
+          <div className="w-full space-y-3 mt-10">
             <button 
               onClick={() => setShowPasswordModal(true)}
               disabled={isResettingPassword}
-              className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all shadow-sm disabled:opacity-50"
+              className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all shadow-sm disabled:opacity-50"
             >
               <Lock size={18} />
-              {isResettingPassword ? 'Đang gửi...' : 'Thay đổi mật khẩu'}
+              {isResettingPassword ? 'Đang gửi...' : 'Đổi mật khẩu'}
             </button>
-
             {!isAdminRoute && (
-              <button 
-                onClick={handleLogout}
-                className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors shadow-sm"
-              >
+              <button onClick={handleLogout} className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors">
                 <LogOut size={18} />
-                Đăng xuất hệ thống
+                Đăng xuất
               </button>
             )}
           </div>
         </div>
 
         {/* Right: Form */}
-        <div className="flex-1 space-y-10">
+        <div className="flex-1 space-y-8">
           <section className="space-y-6">
-            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-3">Thông tin cơ bản</h2>
+            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-3">Thông tin chi tiết</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
-                <input 
-                  type="email" 
-                  name="email"
-                  value={profile.email}
-                  disabled
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed outline-none"
-                />
-                <p className="text-xs text-gray-400 mt-1.5">Email được dùng làm tài khoản đăng nhập nên không thể thay đổi.</p>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Địa chỉ Email</label>
+                <input type="email" value={profile.email} disabled className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed outline-none font-medium" />
               </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Họ và tên</label>
+                <input type="text" name="fullName" value={profile.fullName} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white font-medium" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Số điện thoại</label>
+                <input type="tel" name="phoneNumber" value={profile.phoneNumber} onChange={handleInputChange} placeholder="Nhập số điện thoại..." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white font-medium" />
+              </div>
+              {!isAdmin && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">MSSV</label>
+                    <input type="text" name="studentId" value={profile.studentId} onChange={handleInputChange} placeholder="SE123456" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Khoa</label>
+                    <input type="text" name="faculty" value={profile.faculty} onChange={handleInputChange} placeholder="Công nghệ thông tin" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white font-medium" />
+                  </div>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Họ và tên</label>
-                <input 
-                  type="text" 
-                  name="fullName"
-                  value={profile.fullName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Số điện thoại</label>
-                <input 
-                  type="tel" 
-                  name="phoneNumber"
-                  value={profile.phoneNumber}
-                  onChange={handleInputChange}
-                  placeholder="Chưa cập nhật"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
-                />
-              </div>
-              
               <div className="flex justify-end pt-4">
-                <button 
-                  onClick={handleSaveProfile}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
+                <button onClick={handleSaveProfile} disabled={isSaving} className="flex items-center gap-2 px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50">
                   <Save size={18} />
-                  {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  {isSaving ? 'Đang lưu...' : 'Lưu hồ sơ'}
                 </button>
               </div>
             </div>

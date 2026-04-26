@@ -18,20 +18,38 @@ public class WorkshopController {
         this.workshopService = workshopService;
     }
 
+    // 1. LẤY DANH SÁCH
     @GetMapping
     public List<Workshop> getAllWorkshops() {
         return workshopService.getAllWorkshops();
     }
 
+    // 2. LẤY CHI TIẾT 1 WORKSHOP
     @GetMapping("/{id}")
     public ResponseEntity<Workshop> getWorkshopById(@PathVariable Long id) {
+        // Giữ lại logic an toàn của nhánh HEAD
         return workshopService.getWorkshopById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // 3. TẠO MỚI
     @PostMapping
     public Workshop createWorkshop(@RequestBody Workshop workshop) {
         return workshopService.createWorkshop(workshop);
+    }
+
+    // 4. CẬP NHẬT WORKSHOP (Edit)
+    @PutMapping("/{id}")
+    public ResponseEntity<Workshop> updateWorkshop(@PathVariable Long id, @RequestBody Workshop workshopDetails) {
+        Workshop updatedWorkshop = workshopService.updateWorkshop(id, workshopDetails);
+        return ResponseEntity.ok(updatedWorkshop);
+    }
+
+    // 5. XÓA WORKSHOP (Delete)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteWorkshop(@PathVariable Long id) {
+        workshopService.deleteWorkshop(id);
+        return ResponseEntity.ok().build();
     }
 }

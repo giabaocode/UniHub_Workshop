@@ -20,63 +20,71 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final WorkshopRepository workshopRepository;
-    
-    public String checkTicketStatus(String ticketCode) {
-    Ticket ticket = ticketRepository.findByTicketCode(ticketCode)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy vé"));
-    return "PAID";
-}
 
+    // 1. CONSTRUCTOR LUÔN NẰM TRÊN CÙNG
     public TicketService(TicketRepository ticketRepository, UserRepository userRepository, WorkshopRepository workshopRepository) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.workshopRepository = workshopRepository;
     }
 
+    // 2. HÀM DÙNG CHUNG (PRIVATE)
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("Người dùng chưa đăng nhập"));
+                .orElseThrow(() -> new RuntimeException("Người dùng chưa đăng nhập hoặc phiên đã hết hạn."));
     }
 
+    // 3. KIỂM TRA ĐÃ CÓ VÉ CHƯA
     public boolean isUserRegistered(Long workshopId) {
-    User user = getCurrentUser();
-    Workshop workshop = workshopRepository.findById(workshopId).orElseThrow();
-    
-    // Cực kỳ đơn giản: Có trong DB = Đã mua, Không có = Chưa mua
-    return ticketRepository.existsByUserAndWorkshop(user, workshop);
-}
+        User user = getCurrentUser();
+        Workshop workshop = workshopRepository.findById(workshopId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop với ID: " + workshopId));
+        
+        // Cực kỳ đơn giản: Có trong DB = Đã mua, Không có = Chưa mua
+        return ticketRepository.existsByUserAndWorkshop(user, workshop);
+    }
+
+    // 4. KIỂM TRA TRẠNG THÁI VÉ (Dành cho API Frontend gọi thăm dò)
+    public String checkTicketStatus(String ticketCode) {
+        Ticket ticket = ticketRepository.findByTicketCode(ticketCode)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vé: " + ticketCode));
+        return "PAID"; // Cứ có vé trong DB là mặc định "PAID"
+    }
+
+    // 5. ĐĂNG KÝ VÉ VÀ TẠO QR
     public Map<String, Object> registerWorkshop(Long workshopId) {
-    User user = getCurrentUser();
-    Workshop workshop = workshopRepository.findById(workshopId).orElseThrow();
+        User user = getCurrentUser();
+        Workshop workshop = workshopRepository.findById(workshopId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop với ID: " + workshopId));
 
-    if (isUserRegistered(workshopId)) {
-        throw new RuntimeException("Bạn đã sở hữu vé cho sự kiện này!");
+        if (isUserRegistered(workshopId)) {
+            throw new RuntimeException("Bạn đã sở hữu vé cho sự kiện này!");
+        }
+
+        // Tạo mã định danh ngụy trang: TK + 4 số UserID + 4 số WorkshopID + 4 chữ Random
+        String randomStr = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        String ticketCode = String.format("TK%04d%04d%s", user.getId(), workshop.getId(), randomStr);
+        
+        Map<String, Object> response = new HashMap<>();
+
+        if (workshop.getPrice() == null || workshop.getPrice() == 0) {
+            // Vé MIỄN PHÍ: Tạo và lưu luôn
+            Ticket ticket = new Ticket(ticketCode, user, workshop, false);
+            ticketRepository.save(ticket);
+            response.put("status", "FREE_SUCCESS");
+        } else {
+            // Vé CÓ PHÍ: CHỈ trả về thông tin quét QR, KHÔNG LƯU VÀO DB!
+            String qrUrl = String.format(
+                "https://qr.sepay.vn/img?acc=%s&bank=%s&amount=%s&des=%s",
+                "0396660219", "MBBank", workshop.getPrice().intValue(), ticketCode
+            );
+
+            response.put("status", "REQUIRE_PAYMENT");
+            response.put("amount", workshop.getPrice());
+            response.put("memo", ticketCode);
+            response.put("qrUrl", qrUrl);
+        }
+        return response;
     }
-
-    // Tạo mã định danh ngụy trang: TK-{UserID}-{WorkshopID}-{Random}
-   String randomStr = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
-    String ticketCode = String.format("TK%04d%04d%s", user.getId(), workshop.getId(), randomStr);
-    
-    Map<String, Object> response = new HashMap<>();
-
-    if (workshop.getPrice() == null || workshop.getPrice() == 0) {
-        // Vé MIỄN PHÍ: Tạo và lưu luôn
-        Ticket ticket = new Ticket(ticketCode, user, workshop, false);
-        ticketRepository.save(ticket);
-        response.put("status", "FREE_SUCCESS");
-    } else {
-        // Vé CÓ PHÍ: CHỈ trả về thông tin quét QR, KHÔNG LƯU VÀO DB!
-        String qrUrl = String.format(
-            "https://qr.sepay.vn/img?acc=%s&bank=%s&amount=%s&des=%s",
-            "0396660219", "MBBank", workshop.getPrice().intValue(), ticketCode
-        );
-
-        response.put("status", "REQUIRE_PAYMENT");
-        response.put("amount", workshop.getPrice());
-        response.put("memo", ticketCode);
-        response.put("qrUrl", qrUrl);
-    }
-    return response;
-}
 }
