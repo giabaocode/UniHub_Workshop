@@ -18,7 +18,6 @@ const AdminEditWorkshop = () => {
     const [errors, setErrors] = useState({});
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
     const { id } = useParams();
     const [isLoading, setIsLoading] = useState(true);
 

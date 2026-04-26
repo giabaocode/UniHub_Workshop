@@ -38,8 +38,16 @@ public class AuthResponse {
     public String getStudentId() { return studentId; }
     public void setStudentId(String studentId) { this.studentId = studentId; }
 
+    public String getRole() {
+        return role;
+    }
+
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
     }
 
     public void setAvatarUrl(String avatarUrl) {
