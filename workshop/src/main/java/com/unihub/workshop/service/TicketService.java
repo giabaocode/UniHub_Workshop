@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TicketService {
@@ -53,6 +55,7 @@ public class TicketService {
     }
 
     // 5. ĐĂNG KÝ VÉ VÀ TẠO QR
+    @Transactional
     public Map<String, Object> registerWorkshop(Long workshopId) {
         User user = getCurrentUser();
         Workshop workshop = workshopRepository.findById(workshopId)
@@ -62,6 +65,10 @@ public class TicketService {
             throw new RuntimeException("Bạn đã sở hữu vé cho sự kiện này!");
         }
 
+        if (workshop.getBookedSpots() >= workshop.getTotalSeats()) {
+            throw new RuntimeException("Rất tiếc, sự kiện này đã hết vé!");
+        }
+
         // Tạo mã định danh ngụy trang: TK + 4 số UserID + 4 số WorkshopID + 4 chữ Random
         String randomStr = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         String ticketCode = String.format("TK%04d%04d%s", user.getId(), workshop.getId(), randomStr);
@@ -69,9 +76,17 @@ public class TicketService {
         Map<String, Object> response = new HashMap<>();
 
         if (workshop.getPrice() == null || workshop.getPrice() == 0) {
+            try {
+                // Tăng số lượng vé và kích hoạt Version (Optimistic Locking)
+                workshop.setBookedSpots(workshop.getBookedSpots() + 1);
+                workshopRepository.saveAndFlush(workshop);
+            } catch (ObjectOptimisticLockingFailureException e) {
+                throw new RuntimeException("Vé cuối cùng đã có người nhanh tay hơn!");
+            }
+
             // Vé MIỄN PHÍ: Tạo và lưu luôn. 
-            // Lưu ý: Đã tích hợp constructor 5 tham số từ nhánh main để đảm bảo có trạng thái "PAID"
-            Ticket ticket = new Ticket(ticketCode, user, workshop, "PAID", false);
+            // Lưu ý: Sử dụng constructor 4 tham số từ Ticket
+            Ticket ticket = new Ticket(ticketCode, user, workshop, false);
             ticketRepository.save(ticket);
             
             response.put("status", "FREE_SUCCESS");

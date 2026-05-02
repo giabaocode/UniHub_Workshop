@@ -8,6 +8,8 @@ import com.unihub.workshop.repository.UserRepository;
 import com.unihub.workshop.repository.WorkshopRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
@@ -29,6 +31,7 @@ public class SePayWebhookController {
     }
 
     // Trong SePayWebhookController.java
+@Transactional
 @PostMapping("/sepay")
 public ResponseEntity<?> handleSePayWebhook(@RequestBody Map<String, Object> payload) {
     String content = (String) payload.get("content");
@@ -56,6 +59,19 @@ public ResponseEntity<?> handleSePayWebhook(@RequestBody Map<String, Object> pay
 
         User user = userRepository.findById(userId).orElseThrow();
         Workshop ws = workshopRepository.findById(workshopId).orElseThrow();
+
+        if (ws.getBookedSpots() >= ws.getTotalSeats()) {
+            System.out.println("Sự kiện đã hết vé, user ID: " + userId + " cần được hoàn tiền.");
+            return ResponseEntity.badRequest().body("Sự kiện đã hết vé, cần hoàn tiền");
+        }
+
+        try {
+            ws.setBookedSpots(ws.getBookedSpots() + 1);
+            workshopRepository.saveAndFlush(ws);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            System.out.println("Xung đột chỗ ngồi, user ID: " + userId + " cần được hoàn tiền.");
+            return ResponseEntity.badRequest().body("Xung đột chỗ ngồi, cần hoàn tiền");
+        }
 
         // 5. TẠO VÉ TRONG DATABASE
         Ticket ticket = new Ticket(ticketCode, user, ws, false);

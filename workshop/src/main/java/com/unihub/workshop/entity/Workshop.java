@@ -33,9 +33,11 @@ public class Workshop {
 
     @Column(columnDefinition = "TEXT")
     private String aiSummary;
-    @Formula("(SELECT COUNT(t.id) FROM ticket t WHERE t.workshop_id = id)")
-    private Integer bookedSpots;
-    
+    @Column(name = "booked_spots")
+    private Integer bookedSpots = 0;
+
+    @Version
+    private Long version;
 
     public Workshop() {
     }
