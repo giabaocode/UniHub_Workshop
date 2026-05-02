@@ -80,8 +80,6 @@ const WorkshopDetail = () => {
       setAiLoading(false);
     }
   };
-  const registrationDeadline = "2026-04-24T23:59:00";
-  const isRegistrationExpired = new Date().getTime() > new Date(registrationDeadline).getTime();
 
   const handleRegisterClick = async () => {
   const user = JSON.parse(localStorage.getItem('user'));

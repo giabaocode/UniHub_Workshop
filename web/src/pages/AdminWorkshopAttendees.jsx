@@ -16,6 +16,59 @@ const AdminWorkshopAttendees = () => {
   const [processingIds, setProcessingIds] = useState([]);
   const itemsPerPage = 10;
 
+  // OFFLINE CHECK-IN STATE
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [offlineCheckIns, setOfflineCheckIns] = useState(() => {
+    return JSON.parse(localStorage.getItem('offlineCheckIns') || '[]');
+  });
+
+  // LẮNG NGHE SỰ KIỆN MẠNG
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // TỰ ĐỘNG ĐỒNG BỘ KHI CÓ MẠNG LẠI
+  useEffect(() => {
+    if (!isOffline && offlineCheckIns.length > 0) {
+      syncOfflineData();
+    }
+  }, [isOffline, offlineCheckIns]);
+
+  const syncOfflineData = async () => {
+    if (offlineCheckIns.length === 0) return;
+    
+    // Tạo bản sao để tránh thao tác trùng
+    const idsToSync = [...offlineCheckIns];
+    let successIds = [];
+
+    for (const attendeeId of idsToSync) {
+      try {
+        await workshopService.checkInAttendee(attendeeId);
+        successIds.push(attendeeId);
+      } catch (error) {
+        console.error("Lỗi đồng bộ ID:", attendeeId, error);
+      }
+    }
+
+    // Xóa những ID đã đồng bộ thành công khỏi LocalStorage
+    const remainingIds = idsToSync.filter(id => !successIds.includes(id));
+    setOfflineCheckIns(remainingIds);
+    localStorage.setItem('offlineCheckIns', JSON.stringify(remainingIds));
+    
+    if (successIds.length > 0) {
+      alert(`🎉 Đã đồng bộ thành công ${successIds.length} lượt Check-in lúc mất mạng lên Server!`);
+    }
+  };
+
   // GỌI API LẤY DỮ LIỆU KHI VÀO TRANG
   useEffect(() => {
     const fetchData = async () => {
@@ -37,22 +90,46 @@ const AdminWorkshopAttendees = () => {
     fetchData();
   }, [id]);
 
-  // LOGIC CHECK-IN THẬT SỰ GỌI XUỐNG DB
+  // LOGIC CHECK-IN THẬT SỰ GỌI XUỐNG DB HOẶC LƯU OFFLINE
   const handleCheckIn = async (attendeeId) => {
     if (processingIds.includes(attendeeId)) return;
     setProcessingIds(prev => [...prev, attendeeId]);
+    
     try {
-      // Gọi API cập nhật trạng thái Check-in (Cần viết thêm hàm này ở Service)
-      await workshopService.checkInAttendee(attendeeId);
-
-      // Nếu API thành công, cập nhật giao diện ngay lập tức
-      setAttendees(attendees.map(a =>
-        a.id === attendeeId ? { ...a, isCheckedIn: true } : a
-      ));
+      if (isOffline) {
+        // CHẾ ĐỘ OFFLINE: Lưu ID vào LocalStorage thay vì gọi API
+        const newOffline = [...offlineCheckIns, attendeeId];
+        setOfflineCheckIns(newOffline);
+        localStorage.setItem('offlineCheckIns', JSON.stringify(newOffline));
+        
+        // Vẫn cập nhật UI xanh lá để không kẹt hàng
+        setAttendees(attendees.map(a =>
+          a.id === attendeeId ? { ...a, isCheckedIn: true } : a
+        ));
+      } else {
+        // CHẾ ĐỘ ONLINE: Gọi API bình thường
+        await workshopService.checkInAttendee(attendeeId);
+        
+        setAttendees(attendees.map(a =>
+          a.id === attendeeId ? { ...a, isCheckedIn: true } : a
+        ));
+      }
     } catch (error) {
-      alert("Lỗi Check-in: " + (error.message || "Không xác định"));
+      // Bắt trường hợp đang thao tác thì rớt mạng đột ngột (Failed to fetch)
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('Network Error')) {
+        const newOffline = [...offlineCheckIns, attendeeId];
+        setOfflineCheckIns(newOffline);
+        localStorage.setItem('offlineCheckIns', JSON.stringify(newOffline));
+        
+        setAttendees(attendees.map(a =>
+          a.id === attendeeId ? { ...a, isCheckedIn: true } : a
+        ));
+        alert("⚠️ Đã rớt mạng! Hệ thống tự động lưu Check-in Offline.");
+      } else {
+        alert("Lỗi Check-in: " + (error.message || "Không xác định"));
+      }
     } finally {
-      setProcessingIds(prev => prev.filter(id => id !== attendeeId))
+      setProcessingIds(prev => prev.filter(id => id !== attendeeId));
     }
   };
 
@@ -101,6 +178,12 @@ const AdminWorkshopAttendees = () => {
             Danh sách tham dự: <span className="text-blue-600">{workshop?.title || `Workshop #${id}`}</span>
           </h1>
           <div className="flex gap-2">
+            {isOffline && (
+              <span className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl border border-red-200 text-sm shadow-sm">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                Offline ({offlineCheckIns.length} chờ Sync)
+              </span>
+            )}
             <button className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 font-bold rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200 shadow-sm text-sm">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               Xuất CSV

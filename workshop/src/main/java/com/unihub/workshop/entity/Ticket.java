@@ -3,7 +3,9 @@ package com.unihub.workshop.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "ticket")
+@Table(name = "ticket", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"user_id", "workshop_id"})
+})
 public class Ticket {
 
     @Id
