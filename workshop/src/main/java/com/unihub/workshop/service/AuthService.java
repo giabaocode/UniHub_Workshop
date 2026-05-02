@@ -31,6 +31,7 @@ import java.util.List;
 
 @Service
 public class AuthService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -45,7 +46,13 @@ public class AuthService {
     @Value("${github.client.secret:YOUR_GITHUB_CLIENT_SECRET}")
     private String githubClientSecret;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, AuthenticationManager authenticationManager) {
+    // Giữ cấu trúc inject gọn gàng của nhánh main
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -63,11 +70,23 @@ public class AuthService {
                 passwordEncoder.encode(request.getPassword()),
                 "USER"
         );
+        user.setStudentId(request.getStudentId());
+        user.setFaculty(request.getFaculty());
 
         userRepository.save(user);
+
         String jwtToken = jwtService.generateToken(user);
 
-        return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+        return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
     }
 
     public AuthResponse authenticate(LoginRequest request) {
@@ -83,14 +102,23 @@ public class AuthService {
 
         String jwtToken = jwtService.generateToken(user);
 
-        return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+        // Đã cập nhật dùng cấu trúc trả về đầy đủ của nhánh main
+        return new AuthResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
     }
 
     public AuthResponse googleAuthenticate(GoogleLoginRequest request) {
         try {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
                     // Specify the CLIENT_ID of the app that accesses the backend:
-                    // We only enforce audience verification if it's not the placeholder
                     .setAudience("YOUR_GOOGLE_CLIENT_ID".equals(googleClientId) ? null : Collections.singletonList(googleClientId))
                     .build();
 
@@ -123,7 +151,17 @@ public class AuthService {
                 }
 
                 String jwtToken = jwtService.generateToken(user);
-                return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+                // Đã cập nhật dùng cấu trúc trả về đầy đủ của nhánh main
+                return new AuthResponse(
+                        jwtToken,
+                        user.getEmail(),
+                        user.getFullName(),
+                        user.getRole(),
+                        user.getAvatarUrl(),
+                        user.getPhoneNumber(),
+                        user.getStudentId(),
+                        user.getFaculty()
+                );
             } else {
                 throw new RuntimeException("Invalid Google token.");
             }
@@ -228,7 +266,18 @@ public class AuthService {
             }
 
             String jwtToken = jwtService.generateToken(user);
-            return new AuthResponse(jwtToken, user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl());
+            
+            // Đã cập nhật dùng cấu trúc trả về đầy đủ của nhánh main
+            return new AuthResponse(
+                    jwtToken,
+                    user.getEmail(),
+                    user.getFullName(),
+                    user.getRole(),
+                    user.getAvatarUrl(),
+                    user.getPhoneNumber(),
+                    user.getStudentId(),
+                    user.getFaculty()
+            );
 
         } catch (Exception e) {
             throw new RuntimeException("GitHub authentication failed", e);

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import org.hibernate.annotations.Formula;
 
 @Entity
 public class Workshop {
@@ -32,6 +33,9 @@ public class Workshop {
 
     @Column(columnDefinition = "TEXT")
     private String aiSummary;
+    @Formula("(SELECT COUNT(t.id) FROM ticket t WHERE t.workshop_id = id)")
+    private Integer bookedSpots;
+    
 
     public Workshop() {
     }
@@ -153,4 +157,12 @@ public class Workshop {
     public void setAiSummary(String aiSummary) {
         this.aiSummary = aiSummary;
     }
+    public Integer getBookedSpots() {
+        return bookedSpots != null ? bookedSpots : 0;   
+    }
+
+    public void setBookedSpots(Integer bookedSpots) {
+        this.bookedSpots = bookedSpots;
+    }
+    
 }

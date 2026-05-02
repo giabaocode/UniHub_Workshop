@@ -14,7 +14,7 @@ const formatPrice = (price) => {
 };
 
 const WorkshopCard = ({ workshop }) => {
-  const bookedSpots = 0; 
+  const bookedSpots = workshop.bookedSpots || 0;
   const spotsLeft = workshop.totalSeats - bookedSpots;
   const progressPercentage = workshop.totalSeats > 0 ? (bookedSpots / workshop.totalSeats) * 100 : 0;
   const isAlmostFull = spotsLeft > 0 && spotsLeft <= (workshop.totalSeats * 0.2);
@@ -23,24 +23,23 @@ const WorkshopCard = ({ workshop }) => {
   const fallbackImage = "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80";
 
   return (
-    <Link 
-      to={`/workshop/${workshop.id}`} 
+    <Link
+      to={`/workshop/${workshop.id}`}
       className="glass rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 flex flex-col h-full group cursor-pointer border border-white/50 hover:border-blue-200 relative"
     >
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-      
+
       <div className="relative h-56 overflow-hidden bg-gray-100">
-        <img 
-          src={workshop.coverImageUrl || fallbackImage} 
-          alt={workshop.title} 
+        <img
+          src={workshop.coverImageUrl || fallbackImage}
+          alt={workshop.title}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent"></div>
-        
+
         <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-          <span className={`px-4 py-1.5 text-sm font-extrabold rounded-full shadow-lg backdrop-blur-md border ${
-            isFree ? 'bg-emerald-500/90 text-white border-emerald-400/50' : 'bg-amber-500/90 text-white border-amber-400/50'
-          }`}>
+          <span className={`px-4 py-1.5 text-sm font-extrabold rounded-full shadow-lg backdrop-blur-md border ${isFree ? 'bg-emerald-500/90 text-white border-emerald-400/50' : 'bg-amber-500/90 text-white border-amber-400/50'
+            }`}>
             {isFree ? '✨ MIỄN PHÍ' : formatPrice(workshop.price)}
           </span>
         </div>
@@ -69,24 +68,24 @@ const WorkshopCard = ({ workshop }) => {
         <div className="mt-auto pt-4 border-t border-gray-200/50">
           {workshop.registrationDeadline && (
             <div className="mb-5">
-              {/* ĐÃ CHUYỂN TITLE VÀO BÊN TRONG COMPONENT */}
-              <CountdownTimer 
-                targetDate={workshop.registrationDeadline} 
+              <CountdownTimer
+                targetDate={workshop.registrationDeadline}
                 title="Đóng đăng ký sau"
-                expiredMessage="Đã đóng đăng ký" 
+                expiredMessage="Đã đóng đăng ký"
               />
             </div>
           )}
-          
+
           <div className="mb-5">
             <div className="flex justify-between text-xs font-bold mb-2 uppercase tracking-wider">
               <span className="text-gray-500">Tình trạng vé</span>
-              <span className={isFull ? "text-gray-500" : (isAlmostFull ? "text-red-500" : "text-blue-600")}>
-                {isFull ? "Đã bán hết" : `${bookedSpots}/${workshop.totalSeats} vé`}
+              {/* Giữ lại đoạn code xịn xò của nhánh main ở đây */}
+              <span className={isFull ? "text-red-600 font-bold" : (isAlmostFull ? "text-red-600 font-bold animate-pulse" : "text-blue-600 font-bold")}>
+                {isFull ? "ĐÃ BÁN HẾT" : `Chỉ còn ${spotsLeft} chỗ`}
               </span>
             </div>
             <div className="w-full bg-gray-200/50 rounded-full h-2.5 overflow-hidden backdrop-blur-sm">
-              <div 
+              <div
                 className={`h-full rounded-full transition-all duration-1000 relative overflow-hidden ${isFull ? 'bg-gray-400' : (isAlmostFull ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-blue-400')}`}
                 style={{ width: `${progressPercentage}%` }}
               >

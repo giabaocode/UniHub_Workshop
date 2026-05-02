@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Timer } from 'lucide-react';
+import { Clock, Timer, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import CustomDatePicker from '../components/CustomDatePicker';
@@ -10,12 +10,14 @@ import { workshopService } from '../services/workshopService';
 import { handleNumberKeyDown } from '../utils/helpers'; 
 
 const AdminCreateWorkshop = () => {
+  // GỘP STATE: Giữ lại pdfUrl, aiSummary của nhánh feat VÀ isSubmitting của nhánh main
   const [formData, setFormData] = useState({
     title: "", speaker: "", eventDate: "", startTime: "", room: "",
     totalSeats: "", price: "", registrationDeadlineDate: "", registrationDeadlineTime: "",
     description: "", coverImageUrl: "", pdfUrl: "", aiSummary: "",
   });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -34,6 +36,7 @@ const AdminCreateWorkshop = () => {
     setErrors(prev => ({ ...prev, coverImageUrl: '' }));
   };
 
+  // GIỮ LẠI LOGIC XỬ LÝ AI PDF TỪ NHÁNH FEAT
   const handleAiPdfResult = (result) => {
     if (result) {
       setFormData(prev => ({
@@ -51,6 +54,10 @@ const AdminCreateWorkshop = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // GIỮ LẠI LOGIC CHỐNG BẤM ĐÚP TỪ NHÁNH MAIN
+    if (isSubmitting) return;
+
     const todayDateStr = new Date().toISOString().split('T')[0];
     const todayDateTime = new Date();
     const currentTimeStr = `${String(todayDateTime.getHours()).padStart(2, '0')}:${String(todayDateTime.getMinutes()).padStart(2, '0')}`;
@@ -59,22 +66,22 @@ const AdminCreateWorkshop = () => {
     if (!formData.coverImageUrl) newErrors.coverImageUrl = 'Vui lòng tải lên ảnh bìa cho sự kiện!';
     if (!formData.title.trim()) newErrors.title = 'Vui lòng nhập tên sự kiện!';
     if (!formData.speaker.trim()) newErrors.speaker = 'Vui lòng nhập tên diễn giả!';
-    
+
     if (formData.eventDate) {
-        if (formData.eventDate < todayDateStr) newErrors.eventDate = 'Ngày tổ chức không được nhỏ hơn ngày hiện tại!';
-        else if (formData.eventDate === todayDateStr && formData.startTime && formData.startTime < currentTimeStr) 
-            newErrors.startTime = 'Giờ bắt đầu phải lớn hơn giờ hiện tại!';
+      if (formData.eventDate < todayDateStr) newErrors.eventDate = 'Ngày tổ chức không được nhỏ hơn ngày hiện tại!';
+      else if (formData.eventDate === todayDateStr && formData.startTime && formData.startTime < currentTimeStr)
+        newErrors.startTime = 'Giờ bắt đầu phải lớn hơn giờ hiện tại!';
     }
 
     if (formData.registrationDeadlineDate) {
-        if (formData.registrationDeadlineDate < todayDateStr) newErrors.registrationDeadlineDate = 'Ngày đóng đăng ký không được trong quá khứ!';
-        else if (formData.registrationDeadlineDate === todayDateStr && formData.registrationDeadlineTime && formData.registrationDeadlineTime < currentTimeStr) 
-            newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải lớn hơn giờ hiện tại!';
-        
-        if (formData.eventDate && formData.registrationDeadlineDate > formData.eventDate) 
-            newErrors.registrationDeadlineDate = 'Ngày đóng vượt quá ngày diễn ra!';
-        else if (formData.eventDate && formData.registrationDeadlineDate === formData.eventDate && formData.registrationDeadlineTime && formData.startTime && formData.registrationDeadlineTime >= formData.startTime) 
-            newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải trước giờ bắt đầu!';
+      if (formData.registrationDeadlineDate < todayDateStr) newErrors.registrationDeadlineDate = 'Ngày đóng đăng ký không được trong quá khứ!';
+      else if (formData.registrationDeadlineDate === todayDateStr && formData.registrationDeadlineTime && formData.registrationDeadlineTime < currentTimeStr)
+        newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải lớn hơn giờ hiện tại!';
+
+      if (formData.eventDate && formData.registrationDeadlineDate > formData.eventDate)
+        newErrors.registrationDeadlineDate = 'Ngày đóng vượt quá ngày diễn ra!';
+      else if (formData.eventDate && formData.registrationDeadlineDate === formData.eventDate && formData.registrationDeadlineTime && formData.startTime && formData.registrationDeadlineTime >= formData.startTime)
+        newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải trước giờ bắt đầu!';
     }
 
     if (formData.totalSeats === '') newErrors.totalSeats = 'Vui lòng nhập số lượng ghế!';
@@ -92,16 +99,19 @@ const AdminCreateWorkshop = () => {
       totalSeats: formData.totalSeats ? parseInt(formData.totalSeats) : 0,
       price: formData.price ? parseFloat(formData.price) : 0.0,
       startTime: formData.startTime.length === 5 ? formData.startTime : null,
-      registrationDeadline: formData.registrationDeadlineDate && formData.registrationDeadlineTime 
+      registrationDeadline: formData.registrationDeadlineDate && formData.registrationDeadlineTime
         ? `${formData.registrationDeadlineDate}T${formData.registrationDeadlineTime}` : null
     };
 
     try {
+      setIsSubmitting(true);
       await workshopService.createWorkshop(payload);
       alert("Tạo Workshop thành công!");
-      navigate("/admin"); 
+      navigate("/admin");
     } catch (error) {
       alert("Lỗi: " + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -167,6 +177,8 @@ const AdminCreateWorkshop = () => {
                 {errors.price && <p className="text-red-500 text-xs mt-1 font-medium">{errors.price}</p>}
               </div>
             </div>
+            
+            {/* GIỮ LẠI TEXTAREA TỪ NHÁNH FEAT */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả workshop / Nội dung chương trình</label>
               <textarea
@@ -184,13 +196,31 @@ const AdminCreateWorkshop = () => {
         {/* CỘT PHẢI (LINH KIỆN ĐÃ ĐƯỢC TÁCH) */}
         <div className="lg:col-span-5 space-y-6">
           <ImageUploader value={formData.coverImageUrl} onChange={handleImageChange} error={errors.coverImageUrl} />
+          {/* TRUYỀN HÀM XỬ LÝ VÀO COMPONENT AI */}
           <AiPdfUploader onResult={handleAiPdfResult} />
         </div>
       </div>
 
       <div className="flex justify-end items-center gap-4 pt-4">
-        <button onClick={() => navigate('/admin')} className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all">Hủy</button>
-        <button onClick={handleSubmit} className="px-8 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">Lưu & Đăng Sự kiện</button>
+        <button onClick={() => navigate('/admin')} disabled={isSubmitting} className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all disabled:opacity-50">Hủy</button>
+        
+        {/* NÚT SUBMIT ĐƯỢC STYLE LẠI BẰNG TAILWIND CHO ĐẸP VÀ CHUẨN UX */}
+        <button 
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className={`px-8 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2
+            ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700 hover:-translate-y-0.5 shadow-blue-500/30'}
+          `}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="animate-spin" size={18} />
+              Đang xử lý...
+            </>
+          ) : (
+            'Lưu & Đăng Sự kiện'
+          )}
+        </button>
       </div>
     </div>
   );

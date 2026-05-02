@@ -30,7 +30,9 @@ public class UserController {
                 user.getFullName(),
                 user.getEmail(),
                 user.getPhoneNumber(),
-                user.getAvatarUrl()
+                user.getAvatarUrl(),
+                user.getStudentId(),
+                user.getFaculty()
         ));
     }
 
@@ -46,6 +48,8 @@ public class UserController {
         user.setFullName(profileDto.getFullName());
         user.setPhoneNumber(profileDto.getPhoneNumber());
         user.setAvatarUrl(profileDto.getAvatarUrl());
+        user.setStudentId(profileDto.getStudentId());
+        user.setFaculty(profileDto.getFaculty());
 
         userRepository.save(user);
 
@@ -53,7 +57,9 @@ public class UserController {
                 user.getFullName(),
                 user.getEmail(),
                 user.getPhoneNumber(),
-                user.getAvatarUrl()
+                user.getAvatarUrl(),
+                user.getStudentId(),
+                user.getFaculty()
         ));
     }
 }

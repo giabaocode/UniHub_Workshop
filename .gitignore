@@ -5,3 +5,6 @@ workshop/.mvn/
 .vscode/
 .env
 *.log
+
+
+# .\mvnw spring-boot:run

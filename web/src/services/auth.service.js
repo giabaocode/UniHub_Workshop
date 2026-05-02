@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8080/api/auth';
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/auth`;
 
 const login = async (email, password) => {
     const response = await fetch(`${API_URL}/login`, {
@@ -20,13 +20,13 @@ const login = async (email, password) => {
     return data;
 };
 
-const register = async (fullName, email, password) => {
+const register = async (fullName, email, password, studentId, faculty) => {
     const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ fullName, email, password }),
+        body: JSON.stringify({ fullName, email, password, studentId, faculty }),
     });
 
     if (!response.ok) {

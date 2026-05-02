@@ -78,6 +78,8 @@ const WorkshopDetail = () => {
       setAiLoading(false);
     }
   };
+  const registrationDeadline = "2026-04-24T23:59:00";
+  const isRegistrationExpired = new Date().getTime() > new Date(registrationDeadline).getTime();
 
   const handleRegisterClick = () => {
     setIsWaiting(true);
@@ -352,6 +354,13 @@ const formatBoldText = (text) => {
                 </div>
               )}
 
+              <div className="mb-6">
+                <div className="text-center text-sm font-bold mb-3 uppercase tracking-wider text-gray-500">
+                  Đóng đăng ký sau
+                </div>
+                <CountdownTimer targetDate="24/04/2026 23:59" expiredMessage="Đã hết hạn đăng ký" />
+              </div>
+              
               <h3 className="text-xl font-bold text-gray-900 mb-2 border-t border-gray-100 pt-6">Thông tin đăng ký</h3>
               <div className="flex justify-between items-end py-4 border-b border-gray-100 mb-6">
                 <div>
