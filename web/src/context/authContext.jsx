@@ -1,9 +1,10 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState } from 'react';
 import authService from '../services/auth.service';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+    // Sử dụng cách khởi tạo tối ưu từ nhánh main
     const [user, setUser] = useState(() => authService.getCurrentUser());
 
     useEffect(() => {

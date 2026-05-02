@@ -29,6 +29,7 @@ const UserProfile = () => {
 
   const fileInputRef = useRef(null);
 
+  // --- ĐỌC CẤU HÌNH CLOUDINARY TỪ FILE .ENV CỦA BẠN ---
   const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
@@ -62,6 +63,9 @@ const UserProfile = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
+  // ============================================================
+  // LOGIC UPLOAD ẢNH LÊN CLOUDINARY
+  // ============================================================
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -74,32 +78,25 @@ const UserProfile = () => {
     setIsUploading(true);
     setMessage({ type: '', text: '' });
 
-    const uploadData = new FormData();
-    uploadData.append("file", file);
-    uploadData.append("upload_preset", UPLOAD_PRESET);
-
+    // Dùng logic gọi API thông qua Service từ nhánh feat để code sạch sẽ hơn
     try {
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: uploadData,
+      const res = await userService.uploadAvatar(file);
+      const newAvatarUrl = res.url;
+      
+      // Update local state
+      setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+      
+      // Sync navbar immediately
+      updateUser({
+        fullName: profile.fullName,
+        avatarUrl: newAvatarUrl
       });
-      const data = await response.json();
+      
+      // Save to backend
+      await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
 
-      if (data.secure_url) {
-        const newAvatarUrl = data.secure_url;
-
-        setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
-        updateUser({
-          fullName: profile.fullName,
-          avatarUrl: newAvatarUrl
-        });
-        await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
-
-        setMessage({ type: 'success', text: 'Cập nhật ảnh đại diện thành công!' });
-        setTimeout(() => { setMessage({ type: '', text: '' }); }, 3000);
-      } else {
-        throw new Error(data.error?.message || "Lỗi từ Cloudinary");
-      }
+      setMessage({ type: 'success', text: 'Cập nhật ảnh đại diện thành công!' });
+      setTimeout(() => { setMessage({ type: '', text: '' }); }, 3000);
     } catch (error) {
       console.error("Upload error:", error);
       setMessage({ type: 'error', text: 'Lỗi tải ảnh lên mây. Hãy thử lại!' });

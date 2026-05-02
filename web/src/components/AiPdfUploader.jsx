@@ -103,11 +103,16 @@ const AiPdfUploader = ({ onResult }) => {
       setStep(STEPS.SUMMARIZING);
       const aiResult = await geminiService.summarizePdfContent(pdfText);
 
+
+      // -> Bổ sung dòng log này để kiểm tra cấu trúc thật của AI trả về
+      console.log("Dữ liệu Gemini trả về:", aiResult); 
+
       const finalResult = {
         pdfUrl,
-        briefSummary: aiResult.briefSummary,
-        detailedSummary: aiResult.detailedSummary,
-        hashtags: aiResult.hashtags,
+        briefSummary: aiResult.briefSummary || '',
+        // -> SỬA DÒNG NÀY: Thêm các dự phòng (||) để bắt đúng tên biến của bản chi tiết
+        detailedSummary: aiResult.detailedSummary || aiResult.description || aiResult.summary || aiResult.content || aiResult.text || '',
+        hashtags: aiResult.hashtags || [],
       };
 
       setResult(finalResult);

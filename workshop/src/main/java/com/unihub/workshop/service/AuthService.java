@@ -46,7 +46,13 @@ public class AuthService {
     @Value("${github.client.secret:YOUR_GITHUB_CLIENT_SECRET}")
     private String githubClientSecret;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, AuthenticationManager authenticationManager) {
+    // Giữ cấu trúc inject gọn gàng của nhánh main
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -96,6 +102,7 @@ public class AuthService {
 
         String jwtToken = jwtService.generateToken(user);
 
+        // Đã cập nhật dùng cấu trúc trả về đầy đủ của nhánh main
         return new AuthResponse(
                 jwtToken,
                 user.getEmail(),
@@ -112,7 +119,6 @@ public class AuthService {
         try {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
                     // Specify the CLIENT_ID of the app that accesses the backend:
-                    // We only enforce audience verification if it's not the placeholder
                     .setAudience("YOUR_GOOGLE_CLIENT_ID".equals(googleClientId) ? null : Collections.singletonList(googleClientId))
                     .build();
 

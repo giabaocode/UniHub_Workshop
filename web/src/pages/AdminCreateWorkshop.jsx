@@ -10,6 +10,7 @@ import { workshopService } from '../services/workshopService';
 import { handleNumberKeyDown } from '../utils/helpers';
 
 const AdminCreateWorkshop = () => {
+  // GỘP STATE: Giữ lại pdfUrl, aiSummary của nhánh feat VÀ isSubmitting của nhánh main
   const [formData, setFormData] = useState({
     title: "", speaker: "", eventDate: "", startTime: "", room: "",
     totalSeats: "", price: "", registrationDeadlineDate: "", registrationDeadlineTime: "",
@@ -35,6 +36,7 @@ const AdminCreateWorkshop = () => {
     setErrors(prev => ({ ...prev, coverImageUrl: '' }));
   };
 
+  // GIỮ LẠI LOGIC XỬ LÝ AI PDF TỪ NHÁNH FEAT
   const handleAiPdfResult = (result) => {
     if (result) {
       setFormData(prev => ({
@@ -172,6 +174,8 @@ const AdminCreateWorkshop = () => {
                 {errors.price && <p className="text-red-500 text-xs mt-1 font-medium">{errors.price}</p>}
               </div>
             </div>
+            
+            {/* GIỮ LẠI TEXTAREA TỪ NHÁNH FEAT */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả workshop / Nội dung chương trình</label>
               <textarea
@@ -189,6 +193,7 @@ const AdminCreateWorkshop = () => {
         {/* CỘT PHẢI (LINH KIỆN ĐÃ ĐƯỢC TÁCH) */}
         <div className="lg:col-span-5 space-y-6">
           <ImageUploader value={formData.coverImageUrl} onChange={handleImageChange} error={errors.coverImageUrl} />
+          {/* TRUYỀN HÀM XỬ LÝ VÀO COMPONENT AI */}
           <AiPdfUploader onResult={handleAiPdfResult} />
         </div>
       </div>
@@ -211,7 +216,8 @@ const AdminCreateWorkshop = () => {
             </>
           ) : (
             'Lưu & Đăng Sự kiện'
-          )}</button>
+          )}
+        </button>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ public class TicketService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop với ID: " + workshopId));
         
-        // Cực kỳ đơn giản: Có trong DB = Đã mua, Không có = Chưa mua
+        // Có trong DB = Đã mua, Không có = Chưa mua
         return ticketRepository.existsByUserAndWorkshop(user, workshop);
     }
 
@@ -69,10 +69,13 @@ public class TicketService {
         Map<String, Object> response = new HashMap<>();
 
         if (workshop.getPrice() == null || workshop.getPrice() == 0) {
-            // Vé MIỄN PHÍ: Tạo và lưu luôn
-            Ticket ticket = new Ticket(ticketCode, user, workshop, false);
+            // Vé MIỄN PHÍ: Tạo và lưu luôn. 
+            // Lưu ý: Đã tích hợp constructor 5 tham số từ nhánh main để đảm bảo có trạng thái "PAID"
+            Ticket ticket = new Ticket(ticketCode, user, workshop, "PAID", false);
             ticketRepository.save(ticket);
+            
             response.put("status", "FREE_SUCCESS");
+            response.put("ticketCode", ticketCode);
         } else {
             // Vé CÓ PHÍ: CHỈ trả về thông tin quét QR, KHÔNG LƯU VÀO DB!
             String qrUrl = String.format(
@@ -82,7 +85,8 @@ public class TicketService {
 
             response.put("status", "REQUIRE_PAYMENT");
             response.put("amount", workshop.getPrice());
-            response.put("memo", ticketCode);
+            // Frontend sẽ dùng memo (nội dung chuyển khoản) làm mã vé sau khi thanh toán thành công
+            response.put("memo", ticketCode); 
             response.put("qrUrl", qrUrl);
         }
         return response;

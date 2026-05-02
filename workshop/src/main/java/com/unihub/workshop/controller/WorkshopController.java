@@ -27,7 +27,7 @@ public class WorkshopController {
     // 2. LẤY CHI TIẾT 1 WORKSHOP
     @GetMapping("/{id}")
     public ResponseEntity<Workshop> getWorkshopById(@PathVariable Long id) {
-        // Giữ lại logic an toàn của nhánh HEAD
+        // Sử dụng logic an toàn để xử lý trường hợp không tìm thấy Workshop (trả về 404 Not Found)
         return workshopService.getWorkshopById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
