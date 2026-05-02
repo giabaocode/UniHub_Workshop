@@ -1,25 +1,22 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState } from 'react';
 import authService from '../services/auth.service';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+    // Sử dụng cách khởi tạo tối ưu từ nhánh main
     const [user, setUser] = useState(() => authService.getCurrentUser());
-
-    const updateUser = (updatedFields) => {
-        const newUser = { ...user, ...updatedFields };
-        setUser(newUser);
-        localStorage.setItem('user', JSON.stringify(newUser));
-    };
 
     const login = async (email, password) => {
         const data = await authService.login(email, password);
         setUser(data);
+        return data; // <--- THÊM DÒNG NÀY ĐỂ TRANG AUTHPAGE BIẾT LÀ AI ĐANG ĐĂNG NHẬP
     };
 
-    const register = async (fullName, email, password) => {
-        const data = await authService.register(fullName, email, password);
+    const register = async (fullName, email, password, studentId, faculty) => {
+        const data = await authService.register(fullName, email, password, studentId, faculty);
         setUser(data);
+        return data; // <--- Thêm luôn cho đồng bộ
     };
 
     const logout = () => {
@@ -28,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     // --- HÀM MỚI: CẬP NHẬT THÔNG TIN NGƯỜI DÙNG NGAY LẬP TỨC ---
+    // Giữ lại phiên bản dùng prevUser này vì nó an toàn hơn cho React state
     const updateUser = (newUserData) => {
         // Lấy dữ liệu user hiện tại từ State
         setUser(prevUser => {

@@ -42,6 +42,8 @@ public class AuthService {
                 passwordEncoder.encode(request.getPassword()),
                 "USER"
         );
+        user.setStudentId(request.getStudentId());
+        user.setFaculty(request.getFaculty());
 
         userRepository.save(user);
 
@@ -53,7 +55,9 @@ public class AuthService {
                 user.getFullName(),
                 user.getRole(),
                 user.getAvatarUrl(),
-                user.getPhoneNumber()
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
         );
     }
 
@@ -76,7 +80,9 @@ public class AuthService {
                 user.getFullName(),
                 user.getRole(),
                 user.getAvatarUrl(),
-                user.getPhoneNumber()
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
         );
     }
 }

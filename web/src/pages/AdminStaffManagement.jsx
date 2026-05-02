@@ -17,7 +17,7 @@ const AdminStaffManagement = () => {
           <h1 className="text-2xl font-bold text-gray-900">Quản lý Nhân sự (Staff)</h1>
           <p className="text-gray-500 text-sm mt-1">Danh sách tài khoản hỗ trợ điểm danh và quản lý sự kiện.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 whitespace-nowrap"
         >
@@ -51,9 +51,8 @@ const AdminStaffManagement = () => {
                   <td className="p-4 font-semibold text-gray-900">{staff.name}</td>
                   <td className="p-4 text-gray-600">{staff.email}</td>
                   <td className="p-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                      staff.status === 'Hoạt động' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${staff.status === 'Hoạt động' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}>
                       {staff.status}
                     </span>
                   </td>

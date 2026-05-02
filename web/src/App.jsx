@@ -15,6 +15,7 @@ import NotFound from './pages/NotFound';
 import AuthPage from './pages/AuthPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminEditWorkshop from './pages/AdminEditWorkshop'; // Nhớ import ở đầu file
 
 import { AuthProvider } from './context/authContext';
 
@@ -36,18 +37,19 @@ function App() {
           {/* Route không có header */}
           <Route path="/login" element={<AuthPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
-          
+
           {/* Các route có header */}
           <Route path="/" element={<MainLayout><StudentHome /></MainLayout>} />
           <Route path="/workshop/:id" element={<MainLayout><WorkshopDetail /></MainLayout>} />
           <Route path="/my-tickets" element={<ProtectedRoute><MainLayout><MyTickets /></MainLayout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><MainLayout><UserProfile /></MainLayout></ProtectedRoute>} />
-          
+
           {/* Các route Admin (sử dụng AdminLayout riêng) */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="create" element={<AdminCreateWorkshop />} />
             <Route path="workshop/:id/attendees" element={<AdminWorkshopAttendees />} />
+            <Route path="/admin/edit/:id" element={<AdminEditWorkshop />} />
             <Route path="staff" element={<AdminStaffManagement />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="profile" element={<UserProfile />} />

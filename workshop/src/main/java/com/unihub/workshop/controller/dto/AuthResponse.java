@@ -7,16 +7,20 @@ public class AuthResponse {
     private String role;
     private String avatarUrl;
     private String phoneNumber;
+    private String studentId;
+    private String faculty;
 
     public AuthResponse() {}
 
-    public AuthResponse(String token, String email, String fullName, String role, String avatarUrl, String phoneNumber) {
+    public AuthResponse(String token, String email, String fullName, String role, String avatarUrl, String phoneNumber, String studentId, String faculty) {
         this.token = token;
         this.email = email;
         this.fullName = fullName;
         this.role = role;
         this.avatarUrl = avatarUrl;
         this.phoneNumber = phoneNumber;
+        this.studentId = studentId;
+        this.faculty = faculty;
     }
 
     public String getToken() { return token; }
@@ -36,4 +40,10 @@ public class AuthResponse {
 
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+
+    public String getStudentId() { return studentId; }
+    public void setStudentId(String studentId) { this.studentId = studentId; }
+
+    public String getFaculty() { return faculty; }
+    public void setFaculty(String faculty) { this.faculty = faculty; }
 }

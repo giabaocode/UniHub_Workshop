@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Timer } from 'lucide-react';
+import { Clock, Timer, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import CustomDatePicker from '../components/CustomDatePicker';
@@ -7,15 +7,16 @@ import CustomTimePicker from '../components/CustomTimePicker';
 import ImageUploader from '../components/ImageUploader';
 import AiPdfUploader from '../components/AiPdfUploader';
 import { workshopService } from '../services/workshopService';
-import { handleNumberKeyDown } from '../utils/helpers'; 
+import { handleNumberKeyDown } from '../utils/helpers';
 
 const AdminCreateWorkshop = () => {
   const [formData, setFormData] = useState({
     title: "", speaker: "", eventDate: "", startTime: "", room: "",
     totalSeats: "", price: "", registrationDeadlineDate: "", registrationDeadlineTime: "",
-    description: "", coverImageUrl: "", 
+    description: "", coverImageUrl: "",
   });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -36,6 +37,7 @@ const AdminCreateWorkshop = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     const todayDateStr = new Date().toISOString().split('T')[0];
     const todayDateTime = new Date();
     const currentTimeStr = `${String(todayDateTime.getHours()).padStart(2, '0')}:${String(todayDateTime.getMinutes()).padStart(2, '0')}`;
@@ -44,22 +46,22 @@ const AdminCreateWorkshop = () => {
     if (!formData.coverImageUrl) newErrors.coverImageUrl = 'Vui lòng tải lên ảnh bìa cho sự kiện!';
     if (!formData.title.trim()) newErrors.title = 'Vui lòng nhập tên sự kiện!';
     if (!formData.speaker.trim()) newErrors.speaker = 'Vui lòng nhập tên diễn giả!';
-    
+
     if (formData.eventDate) {
-        if (formData.eventDate < todayDateStr) newErrors.eventDate = 'Ngày tổ chức không được nhỏ hơn ngày hiện tại!';
-        else if (formData.eventDate === todayDateStr && formData.startTime && formData.startTime < currentTimeStr) 
-            newErrors.startTime = 'Giờ bắt đầu phải lớn hơn giờ hiện tại!';
+      if (formData.eventDate < todayDateStr) newErrors.eventDate = 'Ngày tổ chức không được nhỏ hơn ngày hiện tại!';
+      else if (formData.eventDate === todayDateStr && formData.startTime && formData.startTime < currentTimeStr)
+        newErrors.startTime = 'Giờ bắt đầu phải lớn hơn giờ hiện tại!';
     }
 
     if (formData.registrationDeadlineDate) {
-        if (formData.registrationDeadlineDate < todayDateStr) newErrors.registrationDeadlineDate = 'Ngày đóng đăng ký không được trong quá khứ!';
-        else if (formData.registrationDeadlineDate === todayDateStr && formData.registrationDeadlineTime && formData.registrationDeadlineTime < currentTimeStr) 
-            newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải lớn hơn giờ hiện tại!';
-        
-        if (formData.eventDate && formData.registrationDeadlineDate > formData.eventDate) 
-            newErrors.registrationDeadlineDate = 'Ngày đóng vượt quá ngày diễn ra!';
-        else if (formData.eventDate && formData.registrationDeadlineDate === formData.eventDate && formData.registrationDeadlineTime && formData.startTime && formData.registrationDeadlineTime >= formData.startTime) 
-            newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải trước giờ bắt đầu!';
+      if (formData.registrationDeadlineDate < todayDateStr) newErrors.registrationDeadlineDate = 'Ngày đóng đăng ký không được trong quá khứ!';
+      else if (formData.registrationDeadlineDate === todayDateStr && formData.registrationDeadlineTime && formData.registrationDeadlineTime < currentTimeStr)
+        newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải lớn hơn giờ hiện tại!';
+
+      if (formData.eventDate && formData.registrationDeadlineDate > formData.eventDate)
+        newErrors.registrationDeadlineDate = 'Ngày đóng vượt quá ngày diễn ra!';
+      else if (formData.eventDate && formData.registrationDeadlineDate === formData.eventDate && formData.registrationDeadlineTime && formData.startTime && formData.registrationDeadlineTime >= formData.startTime)
+        newErrors.registrationDeadlineTime = 'Giờ đóng đăng ký phải trước giờ bắt đầu!';
     }
 
     if (formData.totalSeats === '') newErrors.totalSeats = 'Vui lòng nhập số lượng ghế!';
@@ -77,16 +79,19 @@ const AdminCreateWorkshop = () => {
       totalSeats: formData.totalSeats ? parseInt(formData.totalSeats) : 0,
       price: formData.price ? parseFloat(formData.price) : 0.0,
       startTime: formData.startTime.length === 5 ? formData.startTime : null,
-      registrationDeadline: formData.registrationDeadlineDate && formData.registrationDeadlineTime 
+      registrationDeadline: formData.registrationDeadlineDate && formData.registrationDeadlineTime
         ? `${formData.registrationDeadlineDate}T${formData.registrationDeadlineTime}` : null
     };
 
     try {
+      setIsSubmitting(true);
       await workshopService.createWorkshop(payload);
       alert("Tạo Workshop thành công!");
-      navigate("/admin"); 
+      navigate("/admin");
     } catch (error) {
       alert("Lỗi: " + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -164,7 +169,23 @@ const AdminCreateWorkshop = () => {
 
       <div className="flex justify-end items-center gap-4 pt-4">
         <button onClick={() => navigate('/admin')} className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all">Hủy</button>
-        <button onClick={handleSubmit} className="px-8 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">Lưu & Đăng Sự kiện</button>
+        <button onClick={handleSubmit}
+          disabled={isSubmitting}
+          style={{
+            opacity: isSubmitting ? 0.7 : 1,
+            cursor: isSubmitting ? 'not-allowed' : 'pointer'
+          }}
+          className="px-8 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">
+
+          {isSubmitting ? (
+            <>
+              {/* Icon Loading xoay xoay (nhớ import Loader2 từ lucide-react ở trên đầu file nhé) */}
+              <Loader2 className="animate-spin" size={18} />
+              Đang xử lý...
+            </>
+          ) : (
+            'Lưu & Đăng Sự kiện'
+          )}</button>
       </div>
     </div>
   );

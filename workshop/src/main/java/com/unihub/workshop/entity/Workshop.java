@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import org.hibernate.annotations.Formula;
 
 @Entity
 public class Workshop {
@@ -26,6 +27,10 @@ public class Workshop {
     // CỘT MỚI: CHỨA LINK ẢNH BÌA
     @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
+
+    @Formula("(SELECT COUNT(t.id) FROM ticket t WHERE t.workshop_id = id)")
+    private Integer bookedSpots;
+    
 
     public Workshop() {
     }
@@ -131,4 +136,13 @@ public class Workshop {
     public void setCoverImageUrl(String coverImageUrl) {
         this.coverImageUrl = coverImageUrl;
     }
+
+    public Integer getBookedSpots() {
+        return bookedSpots != null ? bookedSpots : 0;   
+    }
+
+    public void setBookedSpots(Integer bookedSpots) {
+        this.bookedSpots = bookedSpots;
+    }
+    
 }
