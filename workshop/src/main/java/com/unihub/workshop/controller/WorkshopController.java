@@ -18,35 +18,35 @@ public class WorkshopController {
         this.workshopService = workshopService;
     }
 
-    // LẤY DANH SÁCH
+    // 1. LẤY DANH SÁCH
     @GetMapping
     public List<Workshop> getAllWorkshops() {
         return workshopService.getAllWorkshops();
     }
 
-    // TẠO MỚI
+    // 2. LẤY CHI TIẾT 1 WORKSHOP
+    @GetMapping("/{id}")
+    public ResponseEntity<Workshop> getWorkshopById(@PathVariable Long id) {
+        // Sử dụng logic an toàn để xử lý trường hợp không tìm thấy Workshop (trả về 404 Not Found)
+        return workshopService.getWorkshopById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // 3. TẠO MỚI
     @PostMapping
-    public Workshop createWorkshop(@RequestBody Workshop workshop){
+    public Workshop createWorkshop(@RequestBody Workshop workshop) {
         return workshopService.createWorkshop(workshop);
     }
 
-    // ================= CHỖ BỊ THIẾU TỪ ĐÂY =================
-
-    // 1. LẤY CHI TIẾT 1 WORKSHOP (Trị con bug 403)
-    @GetMapping("/{id}")
-    public ResponseEntity<Workshop> getWorkshopById(@PathVariable Long id) {
-        Workshop workshop = workshopService.getWorkshopById(id); // Bạn nhớ check lại tên hàm bên Service nhé
-        return ResponseEntity.ok(workshop);
-    }
-
-    // 2. CẬP NHẬT WORKSHOP (Edit)
+    // 4. CẬP NHẬT WORKSHOP (Edit)
     @PutMapping("/{id}")
     public ResponseEntity<Workshop> updateWorkshop(@PathVariable Long id, @RequestBody Workshop workshopDetails) {
         Workshop updatedWorkshop = workshopService.updateWorkshop(id, workshopDetails);
         return ResponseEntity.ok(updatedWorkshop);
     }
 
-    // 3. XÓA WORKSHOP (Delete)
+    // 5. XÓA WORKSHOP (Delete)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkshop(@PathVariable Long id) {
         workshopService.deleteWorkshop(id);

@@ -40,6 +40,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/github/callback" element={<GithubCallback />} />
           
+
           {/* Các route có header */}
           <Route path="/" element={<MainLayout><StudentHome /></MainLayout>} />
           <Route path="/workshop/:id" element={<MainLayout><WorkshopDetail /></MainLayout>} />

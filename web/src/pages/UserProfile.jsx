@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { Camera, Save, Lock, LogOut, CheckCircle, AlertCircle, Mail, X, ShieldCheck, Loader2  } from 'lucide-react';
+import { Camera, Save, Lock, LogOut, CheckCircle, AlertCircle, Mail, X, ShieldCheck, Loader2 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/authContext';
 import userService from '../services/user.service';
@@ -78,35 +78,25 @@ const UserProfile = () => {
     setIsUploading(true);
     setMessage({ type: '', text: '' });
 
-    const uploadData = new FormData();
-    uploadData.append("file", file);
-    uploadData.append("upload_preset", UPLOAD_PRESET);
-
+    // Dùng logic gọi API thông qua Service từ nhánh feat để code sạch sẽ hơn
     try {
-      // Sử dụng fetch trực tiếp lên Cloudinary từ nhánh main
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: uploadData,
+      const res = await userService.uploadAvatar(file);
+      const newAvatarUrl = res.url;
+      
+      // Update local state
+      setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+      
+      // Sync navbar immediately
+      updateUser({
+        fullName: profile.fullName,
+        avatarUrl: newAvatarUrl
       });
-      const data = await response.json();
+      
+      // Save to backend
+      await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
 
-      if (data.secure_url) {
-        const newAvatarUrl = data.secure_url;
-
-        // Cập nhật State và Backend
-        setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
-        await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
-
-        // Cập nhật Navbar ngay lập tức (Logic gọn gàng từ nhánh feat)
-        updateUser({ fullName: profile.fullName, avatarUrl: newAvatarUrl });
-
-        setMessage({ type: 'success', text: 'Đã cập nhật ảnh đại diện!' });
-        setTimeout(() => {
-          setMessage({ type: '', text: '' });
-        }, 3000);
-      } else {
-        throw new Error(data.error?.message || "Lỗi từ Cloudinary");
-      }
+      setMessage({ type: 'success', text: 'Cập nhật ảnh đại diện thành công!' });
+      setTimeout(() => { setMessage({ type: '', text: '' }); }, 3000);
     } catch (error) {
       console.error("Upload error:", error);
       setMessage({ type: 'error', text: 'Lỗi tải ảnh lên mây. Hãy thử lại!' });
@@ -121,10 +111,7 @@ const UserProfile = () => {
     setMessage({ type: '', text: '' });
     try {
       await userService.updateProfile(profile);
-
-      // Sync navbar immediately
       updateUser({ fullName: profile.fullName, avatarUrl: profile.avatarUrl });
-
       setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
@@ -135,7 +122,6 @@ const UserProfile = () => {
   };
 
   const handlePasswordReset = async () => {
-    // Giữ nguyên logic sử dụng Modal xịn xò của nhánh feat
     setIsResettingPassword(true);
     setMessage({ type: '', text: '' });
     setShowPasswordModal(false);
@@ -159,7 +145,6 @@ const UserProfile = () => {
     );
   }
 
-  // Khai báo mainContent để có thể render Modal ở bên dưới
   const mainContent = (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
       <div className="mb-8">
@@ -168,8 +153,7 @@ const UserProfile = () => {
       </div>
 
       {message.text && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-          }`}>
+        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
           {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           <span className="font-medium">{message.text}</span>
         </div>
@@ -205,11 +189,11 @@ const UserProfile = () => {
           <div className="w-full space-y-3 mt-10">
             <button 
               onClick={() => setShowPasswordModal(true)}
-              disabled={isResettingPassword} 
+              disabled={isResettingPassword}
               className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all shadow-sm disabled:opacity-50"
             >
               <Lock size={18} />
-              Đổi mật khẩu
+              {isResettingPassword ? 'Đang gửi...' : 'Đổi mật khẩu'}
             </button>
             {!isAdminRoute && (
               <button onClick={handleLogout} className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors">

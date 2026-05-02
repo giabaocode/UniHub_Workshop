@@ -3,81 +3,66 @@ package com.unihub.workshop.entity;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "ticket")
 public class Ticket {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(name = "ticket_code", nullable = false, unique = true)
     private String ticketCode;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "workshop_id")
+    @JoinColumn(name = "workshop_id", nullable = false)
     private Workshop workshop;
 
-    private String paymentStatus;
-    private Boolean checkInStatus;
+    // ĐÃ SỬA: Dùng Boolean (chữ B viết hoa) để cho phép nhận giá trị NULL từ Database
+    @Column(name = "check_in_status")
+    private Boolean isScanned = false;
 
+    @Column(name = "payment_status")
+    private String paymentStatus = "PAID"; 
+
+    // Constructor rỗng
     public Ticket() {
     }
 
-    public Ticket(String ticketCode, User user, Workshop workshop, String paymentStatus, Boolean checkInStatus) {
+    // Constructor đầy đủ
+    public Ticket(String ticketCode, User user, Workshop workshop, Boolean isScanned) {
         this.ticketCode = ticketCode;
         this.user = user;
         this.workshop = workshop;
-        this.paymentStatus = paymentStatus;
-        this.checkInStatus = checkInStatus;
+        this.isScanned = isScanned;
+        this.paymentStatus = "PAID";
     }
 
-    public Long getId() {
-        return id;
+    // --- GETTERS & SETTERS ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public String getTicketCode() { return ticketCode; }
+    public void setTicketCode(String ticketCode) { this.ticketCode = ticketCode; }
+    
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    
+    public Workshop getWorkshop() { return workshop; }
+    public void setWorkshop(Workshop workshop) { this.workshop = workshop; }
+    
+    // ĐÃ SỬA: Hàm này an toàn tuyệt đối. Nếu DB bị null thì tự động trả về false
+    public boolean isScanned() { 
+        return this.isScanned != null ? this.isScanned : false; 
     }
-
-    public void setId(Long id) {
-        this.id = id;
+    
+    public void setScanned(Boolean scanned) { 
+        this.isScanned = scanned; 
     }
-
-    public String getTicketCode() {
-        return ticketCode;
-    }
-
-    public void setTicketCode(String ticketCode) {
-        this.ticketCode = ticketCode;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public Workshop getWorkshop() {
-        return workshop;
-    }
-
-    public void setWorkshop(Workshop workshop) {
-        this.workshop = workshop;
-    }
-
-    public String getPaymentStatus() {
-        return paymentStatus;
-    }
-
-    public void setPaymentStatus(String paymentStatus) {
-        this.paymentStatus = paymentStatus;
-    }
-
-    public Boolean getCheckInStatus() {
-        return checkInStatus;
-    }
-
-    public void setCheckInStatus(Boolean checkInStatus) {
-        this.checkInStatus = checkInStatus;
-    }
+    
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 }

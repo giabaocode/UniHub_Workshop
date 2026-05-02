@@ -1,0 +1,71 @@
+package com.unihub.workshop.controller;
+
+import com.unihub.workshop.entity.Ticket;
+import com.unihub.workshop.entity.User;
+import com.unihub.workshop.entity.Workshop;
+import com.unihub.workshop.repository.TicketRepository;
+import com.unihub.workshop.repository.UserRepository;
+import com.unihub.workshop.repository.WorkshopRepository;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/webhooks")
+public class SePayWebhookController {
+
+    private final TicketRepository ticketRepository;
+    private final UserRepository userRepository;
+    private final WorkshopRepository workshopRepository;
+
+    // Cập nhật Constructor để Spring Boot tự động Inject cả 3 Repository
+    public SePayWebhookController(TicketRepository ticketRepository, 
+                                  UserRepository userRepository, 
+                                  WorkshopRepository workshopRepository) {
+        this.ticketRepository = ticketRepository;
+        this.userRepository = userRepository;
+        this.workshopRepository = workshopRepository;
+    }
+
+    // Trong SePayWebhookController.java
+@PostMapping("/sepay")
+public ResponseEntity<?> handleSePayWebhook(@RequestBody Map<String, Object> payload) {
+    String content = (String) payload.get("content");
+    System.out.println("Nhận giao dịch: " + content);
+
+    if (content == null) return ResponseEntity.badRequest().body("Nội dung rỗng");
+
+    // 1. DỌN DẸP CHUỖI: Xoá sạch mọi khoảng trắng và dấu gạch ngang (nếu có)
+    String normalizedContent = content.replaceAll("[\\s\\-]", "").toUpperCase();
+
+    // 2. Tìm vị trí chữ TK
+    int startIndex = normalizedContent.indexOf("TK");
+    if (startIndex == -1) {
+        return ResponseEntity.ok("Không phải giao dịch mua vé (bỏ qua)");
+    }
+
+    try {
+        // 3. Cắt chuẩn 14 ký tự (TK + 4 User + 4 WS + 4 Random)
+        // Ví dụ: Cắt từ "SHOPEEPAY...TK00050010A1B2..." -> Lấy đúng "TK00050010A1B2"
+        String ticketCode = normalizedContent.substring(startIndex, startIndex + 14);
+
+        // 4. Giải mã bằng cách đếm vị trí
+        Long userId = Long.parseLong(ticketCode.substring(2, 6));      // Lấy 4 số tiếp theo sau "TK"
+        Long workshopId = Long.parseLong(ticketCode.substring(6, 10)); // Lấy 4 số tiếp theo nữa
+
+        User user = userRepository.findById(userId).orElseThrow();
+        Workshop ws = workshopRepository.findById(workshopId).orElseThrow();
+
+        // 5. TẠO VÉ TRONG DATABASE
+        Ticket ticket = new Ticket(ticketCode, user, ws, false);
+        ticketRepository.save(ticket);
+        
+        System.out.println("Tạo vé thành công: " + ticketCode);
+        return ResponseEntity.ok("Đã cấp vé");
+    } catch (Exception e) {
+        System.out.println("Lỗi giải mã vé: " + e.getMessage());
+        return ResponseEntity.badRequest().body("Mã vé sai định dạng hoặc bị thiếu");
+    }
+}
+}

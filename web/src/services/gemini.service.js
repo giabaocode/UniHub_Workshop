@@ -26,8 +26,8 @@ Chương trình: ${agendaText}`;
         body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-                temperature: 0.2, // Mức nhiệt độ thấp giúp AI bám sát mẫu
-                maxOutputTokens: 512,
+                temperature: 0.2,
+                maxOutputTokens: 1024,
             }
         }),
     });
@@ -86,8 +86,8 @@ const summarizePdfContent = async (pdfText) => {
         throw new Error('Nội dung PDF quá ngắn hoặc trống.');
     }
 
-    // Cắt bớt nếu quá dài
-    const truncatedText = pdfText.substring(0, 10000);
+    // Cắt bớt nếu quá dài (tăng giới hạn lên 20,000 ký tự)
+    const truncatedText = pdfText.substring(0, 20000);
 
     const prompt = `Bạn là trợ lý AI của UniHub Workshop. 
 Dưới đây là nội dung trích xuất từ file PDF giới thiệu workshop.
@@ -99,7 +99,7 @@ KHÔNG chào hỏi, KHÔNG dùng icon, CHỈ in ra ĐÚNG định dạng sau:
 (Viết 1-2 câu cực kỳ ngắn gọn để hiển thị ở thẻ tóm tắt nhanh)
 
 [DETAILED_SUMMARY]
-(Trình bày chi tiết về nội dung, lộ trình và mục tiêu. Sử dụng dấu gạch đầu dòng '-' cho các ý chính để người đọc dễ theo dõi)
+(Trình bày chi tiết, đầy đủ về nội dung, lộ trình và mục tiêu của workshop. Đảm bảo cung cấp đủ thông tin để người đọc hiểu rõ giá trị của buổi học. Sử dụng dấu gạch đầu dòng '-' cho các ý chính và viết thành các đoạn văn mạch lạc. KHÔNG viết quá ngắn, không lược bỏ thông tin quan trọng)
 
 [HASHTAGS]
 tag1, tag2, tag3, tag4, tag5
@@ -115,7 +115,7 @@ ${truncatedText}
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 2048,
+                maxOutputTokens: 4096,
             }
         }),
     });
@@ -136,22 +136,28 @@ ${truncatedText}
     let hashtags = [];
 
     try {
-        const briefMatch = text.match(/\[BRIEF_SUMMARY\]([\s\S]*?)\[DETAILED_SUMMARY\]/i);
-        const detailedMatch = text.match(/\[DETAILED_SUMMARY\]([\s\S]*?)\[HASHTAGS\]/i);
-        const tagsMatch = text.match(/\[HASHTAGS\]([\s\S]*)/i);
-
-        briefSummary = briefMatch ? briefMatch[1].trim() : '';
-        detailedSummary = detailedMatch ? detailedMatch[1].trim() : '';
+        // Cách tách mới: Tách theo các block [SECTION]
+        const sections = text.split(/\[(BRIEF_SUMMARY|DETAILED_SUMMARY|HASHTAGS)\]/i);
         
-        if (tagsMatch) {
-            const rawTags = tagsMatch[1].trim();
-            hashtags = rawTags.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(tag => tag !== '');
+        for (let i = 1; i < sections.length; i += 2) {
+            const sectionName = sections[i].toUpperCase();
+            const sectionContent = sections[i + 1]?.trim() || '';
+            
+            if (sectionName === 'BRIEF_SUMMARY') briefSummary = sectionContent;
+            if (sectionName === 'DETAILED_SUMMARY') detailedSummary = sectionContent;
+            if (sectionName === 'HASHTAGS') {
+                hashtags = sectionContent.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(tag => tag !== '');
+            }
         }
 
-        // Fallback nếu parse lỗi
+        // Fallback nếu parse lỗi hoặc trống
         if (!briefSummary && !detailedSummary) {
-            briefSummary = text.substring(0, 200) + '...';
+            briefSummary = text.substring(0, 200).trim() + '...';
             detailedSummary = text;
+        } else if (!detailedSummary && briefSummary) {
+            detailedSummary = briefSummary;
+        } else if (!briefSummary && detailedSummary) {
+            briefSummary = detailedSummary.substring(0, 150).trim() + '...';
         }
     } catch (error) {
         console.error('[PDF Extraction Error]', error);

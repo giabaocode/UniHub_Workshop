@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'; // FIX: Đã thêm useEffect
-import { Clock, Timer } from 'lucide-react';
+import { Clock, Timer, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import CustomDatePicker from '../components/CustomDatePicker';
@@ -13,13 +13,13 @@ const AdminEditWorkshop = () => {
     const [formData, setFormData] = useState({
         title: "", speaker: "", eventDate: "", startTime: "", room: "",
         totalSeats: "", price: "", registrationDeadlineDate: "", registrationDeadlineTime: "",
-        description: "", coverImageUrl: "",
+        description: "", coverImageUrl: "", pdfUrl: "", aiSummary: "",
     });
     const [errors, setErrors] = useState({});
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
     const { id } = useParams();
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchDetail = async () => {
@@ -39,6 +39,8 @@ const AdminEditWorkshop = () => {
                     registrationDeadlineTime: data.registrationDeadline && data.registrationDeadline.includes('T') ? data.registrationDeadline.split('T')[1] : "",
                     description: data.description || "",
                     coverImageUrl: data.coverImageUrl || "",
+                    pdfUrl: data.pdfUrl || "",
+                    aiSummary: data.aiSummary || "",
                 })
             } catch (error) {
                 console.error('Error fetching workshop detail:', error);
@@ -65,6 +67,21 @@ const AdminEditWorkshop = () => {
     const handleImageChange = (url) => {
         setFormData(prev => ({ ...prev, coverImageUrl: url }));
         setErrors(prev => ({ ...prev, coverImageUrl: '' }));
+    };
+
+    const handleAiPdfResult = (result) => {
+        if (result) {
+            setFormData(prev => ({
+                ...prev,
+                pdfUrl: result.pdfUrl || '',
+                // Tóm tắt chi tiết cho vào description
+                description: result.detailedSummary || prev.description,
+                // Tóm tắt ngắn cho vào aiSummary (AI Card)
+                aiSummary: `[SUMMARY]\n${result.briefSummary}\n[HASHTAGS]\n${(result.hashtags || []).join(', ')}`,
+            }));
+        } else {
+            setFormData(prev => ({ ...prev, pdfUrl: '', aiSummary: '' }));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -187,14 +204,24 @@ const AdminEditWorkshop = () => {
                                 {errors.price && <p className="text-red-500 text-xs mt-1 font-medium">{errors.price}</p>}
                             </div>
                         </div>
-                        {/* Lưu ý: Nếu bạn có nhập mô tả (description) bằng tay, hãy thêm 1 thẻ <textarea> ở đây nhé */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả workshop / Nội dung chương trình</label>
+                            <textarea
+                                name='description'
+                                value={formData.description}
+                                onChange={handleChange}
+                                rows={6}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm resize-none"
+                                placeholder="Nhập mô tả chi tiết hoặc upload PDF để AI tự điền..."
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* CỘT PHẢI (LINH KIỆN ĐÃ ĐƯỢC TÁCH) */}
                 <div className="lg:col-span-5 space-y-6">
                     <ImageUploader value={formData.coverImageUrl} onChange={handleImageChange} error={errors.coverImageUrl} />
-                    <AiPdfUploader />
+                    <AiPdfUploader onResult={handleAiPdfResult} />
                 </div>
             </div>
 

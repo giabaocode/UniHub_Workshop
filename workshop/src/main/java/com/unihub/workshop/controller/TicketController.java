@@ -1,23 +1,20 @@
 package com.unihub.workshop.controller;
 
-import com.unihub.workshop.controller.dto.TicketDto;
 import com.unihub.workshop.entity.Ticket;
 import com.unihub.workshop.entity.User;
 import com.unihub.workshop.entity.Workshop;
 import com.unihub.workshop.repository.TicketRepository;
 import com.unihub.workshop.repository.UserRepository;
+import com.unihub.workshop.service.TicketService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -27,57 +24,108 @@ public class TicketController {
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final TicketService ticketService;
 
-    public TicketController(TicketRepository ticketRepository, UserRepository userRepository) {
+    public TicketController(TicketRepository ticketRepository, UserRepository userRepository, TicketService ticketService) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
+        this.ticketService = ticketService;
+    }
+
+    @GetMapping("/status/{ticketCode}")
+    public ResponseEntity<Map<String, String>> checkPaymentStatus(@PathVariable String ticketCode) {
+        String status = ticketService.checkTicketStatus(ticketCode);
+        return ResponseEntity.ok(Map.of("status", status));
     }
 
     @GetMapping("/my-tickets")
-    public ResponseEntity<List<TicketDto>> getMyTickets() {
+    public ResponseEntity<List<Map<String, Object>>> getMyTickets() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentPrincipalName = authentication.getName();
-
-        User user = userRepository.findByEmail(currentPrincipalName)
+        User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<Ticket> tickets = ticketRepository.findByUser(user);
-
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        List<TicketDto> ticketDtos = tickets.stream().map(ticket -> {
-            Workshop workshop = ticket.getWorkshop();
-            String status = determineStatus(ticket);
+        List<Map<String, Object>> ticketList = tickets.stream().map(ticket -> {
+        
+            Workshop ws = ticket.getWorkshop();
+            Map<String, Object> map = new HashMap<>();
             
-            String dateStr = workshop.getEventDate() != null ? workshop.getEventDate().format(dateFormatter) : "";
-            String timeStr = workshop.getStartTime() != null 
-                ? workshop.getStartTime().format(timeFormatter)
-                : "";
+            // ĐÃ SỬA: Vé nằm trong DB là "Đã xác nhận", nếu quét QR check-in rồi thì "Đã tham gia"
+            String status = ticket.isScanned() ? "Đã tham gia" : "Đã xác nhận";
 
-            return new TicketDto(
-                    ticket.getTicketCode(),
-                    workshop.getTitle(),
-                    workshop.getSpeaker(),
-                    dateStr,
-                    timeStr,
-                    workshop.getRoom(),
-                    status,
-                    ticket.getTicketCode()
-            );
+            // Map chính xác với các biến bên MyTickets.jsx
+            map.put("workshopId", ws.getId());
+            map.put("id", ticket.getTicketCode()); 
+            map.put("title", ws.getTitle());
+            map.put("speaker", ws.getSpeaker());
+            map.put("room", ws.getRoom());
+            map.put("date", ws.getEventDate() != null ? ws.getEventDate().format(dateFormatter) : "---");
+            map.put("time", ws.getStartTime() != null ? ws.getStartTime().format(timeFormatter) : "---");
+            map.put("status", status);
+            map.put("qrValue", ticket.getTicketCode()); // Dùng mã vé làm QR Code
+
+            return map;
         }).collect(Collectors.toList());
 
-        return ResponseEntity.ok(ticketDtos);
+        return ResponseEntity.ok(ticketList);
     }
 
-    private String determineStatus(Ticket ticket) {
-        if (Boolean.TRUE.equals(ticket.getCheckInStatus())) {
-            return "Đã tham gia";
+    @GetMapping("/check-registration/{workshopId}")
+    public ResponseEntity<Map<String, Boolean>> checkRegistration(@PathVariable Long workshopId) {
+        boolean isRegistered = ticketService.isUserRegistered(workshopId);
+        return ResponseEntity.ok(Map.of("isRegistered", isRegistered));
+    }
+
+    @PostMapping("/register/{workshopId}")
+    public ResponseEntity<Map<String, Object>> registerWorkshop(@PathVariable Long workshopId) {
+        try {
+            // Gọi service và nhận về Map chứa status, qrUrl, memo...
+            Map<String, Object> result = ticketService.registerWorkshop(workshopId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            // Trả về lỗi dưới dạng JSON để Frontend dễ xử lý
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-        if ("PAID".equalsIgnoreCase(ticket.getPaymentStatus())) {
-            return "Đã xác nhận";
-        }
-        return "Chờ thanh toán";
+    }
+
+    // ==========================================================
+    // CÁC API DÀNH CHO ADMIN (QUẢN LÝ DANH SÁCH & CHECK-IN)
+    // ==========================================================
+
+    // 1. Lấy danh sách người tham dự của một Workshop
+    @GetMapping("/workshop/{workshopId}")
+    public ResponseEntity<?> getAttendeesByWorkshop(@PathVariable Long workshopId) {
+        List<Ticket> tickets = ticketRepository.findByWorkshopId(workshopId);
+        
+        // Map dữ liệu Ticket ra định dạng JSON giống y hệt React đang cần
+        List<java.util.Map<String, Object>> attendees = tickets.stream().map(ticket -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", ticket.getId());
+            map.put("ticketCode", ticket.getTicketCode());
+            map.put("name", ticket.getUser() != null ? ticket.getUser().getFullName() : "Khách ẩn danh");
+            map.put("studentId", ticket.getUser() != null ? ticket.getUser().getStudentId() : "");
+            map.put("faculty", ticket.getUser() != null ? ticket.getUser().getFaculty() : "");
+            map.put("paymentStatus", ticket.getPaymentStatus());
+            map.put("isCheckedIn", Boolean.TRUE.equals(ticket.isScanned()));
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(attendees);
+    }
+
+    // 2. Check-in thủ công
+    @PutMapping("/{ticketId}/checkin")
+    public ResponseEntity<?> checkInTicket(@PathVariable Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vé này!"));
+        
+        ticket.setScanned(true); // Đánh dấu đã tham gia
+        ticketRepository.save(ticket);
+        
+        return ResponseEntity.ok(java.util.Map.of("message", "Check-in thành công!"));
     }
 
 

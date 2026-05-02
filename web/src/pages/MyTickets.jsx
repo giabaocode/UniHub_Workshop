@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Calendar, Clock, MapPin, User, Ticket as TicketIcon } from 'lucide-react';
 import ticketService from '../services/ticket.service';
+import { Link } from 'react-router-dom';
 
 const MyTickets = () => {
   const [tickets, setTickets] = useState([]);
@@ -65,9 +66,14 @@ const MyTickets = () => {
                     </span>
                     <span className="text-sm font-mono text-gray-400">#{ticket.id}</span>
                   </div>
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 pr-4">
-                    {ticket.title}
-                  </h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mt-4 line-clamp-2 pr-4">
+  <Link 
+    to={`/workshop/${ticket.workshopId}`} 
+    className="hover:text-blue-600 hover:underline transition-all cursor-pointer"
+  >
+    {ticket.title}
+  </Link>
+</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <User size={16} className="text-gray-400" />

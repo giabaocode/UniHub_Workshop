@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, User, Sparkles, CheckCircle2, Users, RefreshCw, FileText, Loader2 } from 'lucide-react';
 import CheckoutModal from '../components/CheckoutModal';
 import CountdownTimer from '../components/CountdownTimer';
 import geminiService from '../services/gemini.service';
 import { workshopService } from '../services/workshopService';
+import { useParams, useNavigate } from 'react-router-dom'; // Thêm useNavigate
+import ticketService from '../services/ticket.service';
 
 const WorkshopDetail = () => {
   const { id } = useParams();
@@ -13,39 +14,40 @@ const WorkshopDetail = () => {
   const [loadError, setLoadError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const navigate = useNavigate();
 
   // AI Summary state
   const [aiSummary, setAiSummary] = useState('');
   const [aiHashtags, setAiHashtags] = useState([]);
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState('');
+  const [paymentData, setPaymentData] = useState(null);
 
   // Fetch workshop data from API
   useEffect(() => {
-    const fetchWorkshop = async () => {
+    const fetchWorkshopAndStatus = async () => {
       setIsLoading(true);
       try {
         const data = await workshopService.getWorkshopById(id);
         setWorkshop(data);
 
-        // If workshop has aiSummary from DB, use it directly
+        // Kiểm tra vé
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user && user.token) {
+            const check = await ticketService.checkRegistration(id);
+            setIsRegistered(check.isRegistered);
+        }
+
+        // Logic AI giữ nguyên...
         if (data.aiSummary) {
-          // Parse aiSummary — may contain [SUMMARY]...[HASHTAGS]... or plain text
           const summaryMatch = data.aiSummary.match(/\[SUMMARY\]([\s\S]*?)\[HASHTAGS\]/i);
           const tagsMatch = data.aiSummary.match(/\[HASHTAGS\]([\s\S]*)/i);
-
-          if (summaryMatch) {
-            setAiSummary(summaryMatch[1].trim());
-          } else {
-            setAiSummary(data.aiSummary);
-          }
-
-          if (tagsMatch) {
-            setAiHashtags(tagsMatch[1].trim().split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean));
-          }
+          if (summaryMatch) setAiSummary(summaryMatch[1].trim());
+          else setAiSummary(data.aiSummary);
+          if (tagsMatch) setAiHashtags(tagsMatch[1].trim().split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean));
           setAiLoading(false);
         } else {
-          // No saved AI summary, generate from workshop description
           fetchAiSummary(data);
         }
       } catch (err) {
@@ -55,7 +57,7 @@ const WorkshopDetail = () => {
         setIsLoading(false);
       }
     };
-    fetchWorkshop();
+    fetchWorkshopAndStatus();
   }, [id]);
 
   const fetchAiSummary = async (ws) => {
@@ -81,14 +83,33 @@ const WorkshopDetail = () => {
   const registrationDeadline = "2026-04-24T23:59:00";
   const isRegistrationExpired = new Date().getTime() > new Date(registrationDeadline).getTime();
 
-  const handleRegisterClick = () => {
-    setIsWaiting(true);
-    setTimeout(() => {
-      setIsWaiting(false);
+  const handleRegisterClick = async () => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (!user || !user.token) {
+    alert("Vui lòng đăng nhập để đăng ký!");
+    return;
+  }
+setIsWaiting(true);
+  try {
+    const result = await ticketService.registerWorkshop(id);
+    
+    if (result.status === 'FREE_SUCCESS') {
+      // Chỉ với vé miễn phí mới set cái này
+      setIsRegistered(true); 
+      alert('Đăng ký thành công!');
+      navigate('/my-tickets');
+    } else if (result.status === 'REQUIRE_PAYMENT') {
+      // Với vé có phí, KHÔNG ĐƯỢC set isRegistered = true ở đây
+      // Vì người dùng mới chỉ bắt đầu bước thanh toán thôi
+      setPaymentData(result);
       setIsModalOpen(true);
-    }, 2500);
-  };
-
+    }
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setIsWaiting(false);
+  }
+};
   // Loading state
   if (isLoading) {
     return (
@@ -343,16 +364,14 @@ const formatBoldText = (text) => {
             {/* Thẻ hiển thị giá vé & Đăng ký */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
               {workshop.registrationDeadline && (
-                <div className="mb-6">
-                  <div className="text-center text-sm font-bold mb-3 uppercase tracking-wider text-gray-500">
-                    Đóng đăng ký sau
-                  </div>
-                  <CountdownTimer
-                    targetDate={new Date(workshop.registrationDeadline).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    expiredMessage="Đã hết hạn đăng ký"
-                  />
-                </div>
-              )}
+  <div className="mb-6">
+    <CountdownTimer
+      targetDate={workshop.registrationDeadline}
+      title="Đóng đăng ký sau"
+      expiredMessage="Đã hết hạn đăng ký"
+    />
+  </div>
+)}
 
               <div className="mb-6">
                 <div className="text-center text-sm font-bold mb-3 uppercase tracking-wider text-gray-500">
@@ -375,34 +394,43 @@ const formatBoldText = (text) => {
 
               <button
                 onClick={handleRegisterClick}
-                disabled={isWaiting || isRegistrationExpired}
+                disabled={isWaiting || (isRegistrationExpired && !isRegistered)}
                 className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${
-                  (isWaiting || isRegistrationExpired)
+                  isWaiting || (isRegistrationExpired && !isRegistered)
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30 hover:-translate-y-1'
+                    : isRegistered 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-1'
                 }`}
               >
-                {isRegistrationExpired ? 'Hết thời hạn đăng ký' : isWaiting ? (
+                {isWaiting ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Đang xếp hàng...
+                    <Loader2 size={24} className="animate-spin" />
+                    Đang xử lý...
                   </>
-                ) : 'Đăng ký ngay'}
+                ) : isRegistered ? (
+                  <>
+                    <CheckCircle2 size={24} /> Đã đăng ký (Xem vé)
+                  </>
+                ) : isRegistrationExpired ? (
+                  'Hết thời hạn đăng ký'
+                ) : (
+                  'Đăng ký ngay'
+                )}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <CheckoutModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        workshopTitle={workshop.title}
-        price={formatPrice(workshop.price)}
-      />
+      {/* Sửa lại đoạn này */}
+<CheckoutModal
+  isOpen={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  workshopTitle={workshop.title}
+  paymentData={paymentData} 
+  workshopId={id}
+/>
 
       {/* Waiting Queue Overlay */}
       {isWaiting && (

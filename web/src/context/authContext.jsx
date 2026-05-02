@@ -7,6 +7,12 @@ export const AuthProvider = ({ children }) => {
     // Sử dụng cách khởi tạo tối ưu từ nhánh main
     const [user, setUser] = useState(() => authService.getCurrentUser());
 
+    useEffect(() => {
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+            setUser(currentUser);
+        }
+    }, []);
     const login = async (email, password) => {
         const data = await authService.login(email, password);
         setUser(data);
@@ -35,7 +41,6 @@ export const AuthProvider = ({ children }) => {
     };
 
     // --- HÀM MỚI: CẬP NHẬT THÔNG TIN NGƯỜI DÙNG NGAY LẬP TỨC ---
-    // Giữ lại phiên bản dùng prevUser này vì nó an toàn hơn cho React state
     const updateUser = (newUserData) => {
         // Lấy dữ liệu user hiện tại từ State
         setUser(prevUser => {

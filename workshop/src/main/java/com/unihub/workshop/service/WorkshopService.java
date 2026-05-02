@@ -20,6 +20,9 @@ public class WorkshopService {
         return workshopRepository.findAll();
     }
 
+    // Chỉ giữ lại MỘT hàm getWorkshopById này
+    public Optional<Workshop> getWorkshopById(Long id) {
+        return workshopRepository.findById(id);
     public Workshop createWorkshop(Workshop workshop) {
         return workshopRepository.save(workshop);
     }
@@ -46,10 +49,30 @@ public class WorkshopService {
         return workshopRepository.save(workshop);
     }
 
+    // CẬP NHẬT WORKSHOP
+    public Workshop updateWorkshop(Long id, Workshop workshopDetails) {
+        Workshop workshop = workshopRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Workshop not found with id: " + id));
+
+        workshop.setTitle(workshopDetails.getTitle());
+        workshop.setDescription(workshopDetails.getDescription());
+        workshop.setSpeaker(workshopDetails.getSpeaker());
+        workshop.setRoom(workshopDetails.getRoom());
+        workshop.setEventDate(workshopDetails.getEventDate());
+        workshop.setStartTime(workshopDetails.getStartTime());
+        workshop.setRegistrationDeadline(workshopDetails.getRegistrationDeadline());
+        workshop.setTotalSeats(workshopDetails.getTotalSeats());
+        workshop.setPrice(workshopDetails.getPrice());
+        workshop.setCoverImageUrl(workshopDetails.getCoverImageUrl());
+        
+        return workshopRepository.save(workshop);
+    }
+
     // XÓA WORKSHOP
     public void deleteWorkshop(Long id) {
-        Workshop workshop = getWorkshopById(id);
+        Workshop workshop = workshopRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Workshop not found with id: " + id));
+                
         workshopRepository.delete(workshop);
     }
 }
-

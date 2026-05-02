@@ -151,17 +151,16 @@ public class AuthService {
                 }
 
                 String jwtToken = jwtService.generateToken(user);
-                // Đã cập nhật dùng cấu trúc trả về đầy đủ của nhánh main
                 return new AuthResponse(
-                        jwtToken,
-                        user.getEmail(),
-                        user.getFullName(),
-                        user.getRole(),
-                        user.getAvatarUrl(),
-                        user.getPhoneNumber(),
-                        user.getStudentId(),
-                        user.getFaculty()
-                );
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
             } else {
                 throw new RuntimeException("Invalid Google token.");
             }
@@ -266,18 +265,16 @@ public class AuthService {
             }
 
             String jwtToken = jwtService.generateToken(user);
-            
-            // Đã cập nhật dùng cấu trúc trả về đầy đủ của nhánh main
             return new AuthResponse(
-                    jwtToken,
-                    user.getEmail(),
-                    user.getFullName(),
-                    user.getRole(),
-                    user.getAvatarUrl(),
-                    user.getPhoneNumber(),
-                    user.getStudentId(),
-                    user.getFaculty()
-            );
+                jwtToken,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                user.getStudentId(),
+                user.getFaculty()
+        );
 
         } catch (Exception e) {
             throw new RuntimeException("GitHub authentication failed", e);
