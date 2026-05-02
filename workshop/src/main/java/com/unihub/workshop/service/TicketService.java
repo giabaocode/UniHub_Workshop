@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.ResponseEntity;
 import com.unihub.workshop.event.TicketCreatedEvent;
@@ -134,18 +133,23 @@ public class TicketService {
         return response;
     }
 
-    @CircuitBreaker(name = "paymentService", fallbackMethod = "fallbackPaymentGateway")
     public String generatePaymentUrl(String ticketCode, Double price) {
         RestTemplate restTemplate = new RestTemplate();
         String url = String.format("https://qr.sepay.vn/img?acc=%s&bank=%s&amount=%s&des=%s",
                 "0396660219", "MBBank", price.intValue(), ticketCode);
         
-        // Gọi HTTP thật để giả lập nguy cơ sập cổng thanh toán
-        ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
-        if (response.getStatusCode().is2xxSuccessful()) {
-            return url;
+        try {
+            // Gọi HTTP thật để kiểm tra cổng thanh toán
+            ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return url;
+            }
+            // Nếu API trả về lỗi nhưng không ném Exception (VD: 404, 500)
+            return fallbackPaymentGateway(ticketCode, price, new RuntimeException("Cổng thanh toán trả về lỗi: " + response.getStatusCode()));
+        } catch (Exception e) {
+            // Nếu rớt mạng hoặc cổng thanh toán sập hẳn, tự động nhảy vào Fallback
+            return fallbackPaymentGateway(ticketCode, price, e);
         }
-        throw new RuntimeException("Lỗi kết nối cổng thanh toán");
     }
 
     public String fallbackPaymentGateway(String ticketCode, Double price, Throwable t) {
@@ -154,4 +158,5 @@ public class TicketService {
         // Graceful Degradation: Hạ cấp dịch vụ nhẹ nhàng
         return "PAY_AT_COUNTER";
     }
+
 }

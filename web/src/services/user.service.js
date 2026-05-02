@@ -2,12 +2,15 @@ const API_URL = `${import.meta.env.VITE_API_BASE_URL}/users`;
 const AUTH_API_URL = `${import.meta.env.VITE_API_BASE_URL}/auth`;
 const UPLOAD_API_URL = `${import.meta.env.VITE_API_BASE_URL}/upload`;
 
+// Tích hợp sẵn thẻ Ngrok vào Header chung
 const getAuthHeader = () => {
     const user = JSON.parse(localStorage.getItem('user'));
+    const headers = { 'ngrok-skip-browser-warning': 'true' }; // Mặc định luôn có
+    
     if (user && user.token) {
-        return { 'Authorization': `Bearer ${user.token}` };
+        headers['Authorization'] = `Bearer ${user.token}`;
     }
-    return {};
+    return headers;
 };
 
 const getProfile = async () => {
@@ -63,11 +66,13 @@ const requestPasswordReset = async () => {
 const forgotPassword = async (email) => {
     const response = await fetch(`${AUTH_API_URL}/forgot-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true' 
+        },
         body: JSON.stringify({ email }),
     });
 
-    // Safely parse JSON — body may be empty on some errors
     const text = await response.text();
     const data = text ? JSON.parse(text) : {};
 
@@ -83,6 +88,7 @@ const resetPassword = async (token, newPassword) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({ token, newPassword }),
     });
@@ -103,6 +109,7 @@ const uploadAvatar = async (file) => {
     formData.append('file', file);
     formData.append('upload_preset', uploadPreset);
 
+    // Không cần ngrok header ở đây vì gọi thẳng lên server của Cloudinary
     const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
         body: formData,

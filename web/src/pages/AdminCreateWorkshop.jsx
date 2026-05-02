@@ -103,10 +103,12 @@ const AdminCreateWorkshop = () => {
     try {
       setIsSubmitting(true);
       await workshopService.createWorkshop(payload);
-      alert("Tạo Workshop thành công!");
+      // Thay vì dùng alert, ta cứ điều hướng thẳng về /admin
+      // Bạn có thể thêm 1 state flash message ở AdminDashboard nếu muốn
       navigate("/admin");
     } catch (error) {
-      alert("Lỗi: " + error.message);
+      console.error(error);
+      alert("Lỗi: " + error.message); // Giữ lại alert cho lỗi vì cần cảnh báo
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Search, CheckCircle, XCircle, Ticket, Users, CheckSquare, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle, XCircle, Ticket, Users, CheckSquare, Loader2, QrCode } from 'lucide-react';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 // IMPORT SERVICE VÀO ĐÂY
 import { workshopService } from '../services/workshopService';
 
@@ -14,6 +15,7 @@ const AdminWorkshopAttendees = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [processingIds, setProcessingIds] = useState([]);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const itemsPerPage = 10;
 
   // OFFLINE CHECK-IN STATE
@@ -45,7 +47,7 @@ const AdminWorkshopAttendees = () => {
 
   const syncOfflineData = async () => {
     if (offlineCheckIns.length === 0) return;
-    
+
     // Tạo bản sao để tránh thao tác trùng
     const idsToSync = [...offlineCheckIns];
     let successIds = [];
@@ -63,7 +65,7 @@ const AdminWorkshopAttendees = () => {
     const remainingIds = idsToSync.filter(id => !successIds.includes(id));
     setOfflineCheckIns(remainingIds);
     localStorage.setItem('offlineCheckIns', JSON.stringify(remainingIds));
-    
+
     if (successIds.length > 0) {
       alert(`🎉 Đã đồng bộ thành công ${successIds.length} lượt Check-in lúc mất mạng lên Server!`);
     }
@@ -94,23 +96,23 @@ const AdminWorkshopAttendees = () => {
   const handleCheckIn = async (attendeeId) => {
     if (processingIds.includes(attendeeId)) return;
     setProcessingIds(prev => [...prev, attendeeId]);
-    
+
     try {
       if (isOffline) {
         // CHẾ ĐỘ OFFLINE: Lưu ID vào LocalStorage thay vì gọi API
         const newOffline = [...offlineCheckIns, attendeeId];
         setOfflineCheckIns(newOffline);
         localStorage.setItem('offlineCheckIns', JSON.stringify(newOffline));
-        
+
         // Vẫn cập nhật UI xanh lá để không kẹt hàng
-        setAttendees(attendees.map(a =>
+        setAttendees(prev => prev.map(a =>
           a.id === attendeeId ? { ...a, isCheckedIn: true } : a
         ));
       } else {
         // CHẾ ĐỘ ONLINE: Gọi API bình thường
         await workshopService.checkInAttendee(attendeeId);
-        
-        setAttendees(attendees.map(a =>
+
+        setAttendees(prev => prev.map(a =>
           a.id === attendeeId ? { ...a, isCheckedIn: true } : a
         ));
       }
@@ -120,8 +122,8 @@ const AdminWorkshopAttendees = () => {
         const newOffline = [...offlineCheckIns, attendeeId];
         setOfflineCheckIns(newOffline);
         localStorage.setItem('offlineCheckIns', JSON.stringify(newOffline));
-        
-        setAttendees(attendees.map(a =>
+
+        setAttendees(prev => prev.map(a =>
           a.id === attendeeId ? { ...a, isCheckedIn: true } : a
         ));
         alert("⚠️ Đã rớt mạng! Hệ thống tự động lưu Check-in Offline.");
@@ -132,6 +134,51 @@ const AdminWorkshopAttendees = () => {
       setProcessingIds(prev => prev.filter(id => id !== attendeeId));
     }
   };
+
+  // LOGIC MÁY QUÉT QR CODE
+  useEffect(() => {
+    if (isScannerOpen) {
+      const scanner = new Html5QrcodeScanner(
+        "qr-reader",
+        { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
+        },
+        /* verbose= */ false
+      );
+
+      scanner.render((decodedText) => {
+        // Lọc chuỗi (Đề phòng mã vạch rác, khoảng trắng, hoặc URL)
+        let scannedCode = decodedText.trim();
+        if (scannedCode.includes('/')) {
+          scannedCode = scannedCode.split('/').pop();
+        }
+        scannedCode = scannedCode.toUpperCase();
+
+        // Khi quét thành công, tìm attendee có mã vé khớp
+        const matched = attendees.find(a => a.ticketCode && a.ticketCode.toUpperCase() === scannedCode);
+        if (matched) {
+          if (!matched.isCheckedIn) {
+            handleCheckIn(matched.id);
+            alert(`✅ Đã check-in thành công vé: ${scannedCode}`);
+          } else {
+            alert(`⚠️ Vé ${scannedCode} này ĐÃ ĐƯỢC CHECK-IN trước đó rồi!`);
+          }
+          scanner.clear();
+          setIsScannerOpen(false);
+        } else {
+          alert(`❌ Mã vé "${scannedCode}" không hợp lệ hoặc không thuộc sự kiện này!`);
+        }
+      }, (error) => {
+        // Bỏ qua lỗi rác khi đang quét
+      });
+
+      return () => {
+        scanner.clear().catch(e => console.error(e));
+      };
+    }
+  }, [isScannerOpen, attendees, isOffline]);
 
   // TỰ ĐỘNG TÍNH TOÁN THỐNG KÊ (REAL-TIME)
   const stats = {
@@ -184,6 +231,13 @@ const AdminWorkshopAttendees = () => {
                 Offline ({offlineCheckIns.length} chờ Sync)
               </span>
             )}
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-sm text-sm"
+            >
+              <QrCode size={16} />
+              Quét QR Check-in
+            </button>
             <button className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 font-bold rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200 shadow-sm text-sm">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               Xuất CSV
@@ -191,6 +245,23 @@ const AdminWorkshopAttendees = () => {
           </div>
         </div>
       </div>
+
+      {/* KHUNG QUÉT QR CODE */}
+      {isScannerOpen && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col items-center">
+          <div className="flex justify-between w-full mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Quét mã QR trên vé</h2>
+            <button
+              onClick={() => setIsScannerOpen(false)}
+              className="text-gray-500 hover:text-red-500"
+            >
+              <XCircle size={24} />
+            </button>
+          </div>
+          <div id="qr-reader" className="w-full max-w-md mx-auto overflow-hidden rounded-xl border-2 border-blue-100"></div>
+          <p className="text-gray-500 text-sm mt-4">Đưa mã QR trên vé của sinh viên vào khung hình để tự động Check-in.</p>
+        </div>
+      )}
 
       {/* Quick Stats - Tự động nảy số */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

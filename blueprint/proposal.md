@@ -27,7 +27,7 @@ Xây dựng một hệ thống **UniHub Workshop** số hóa toàn bộ quy trì
    - Quét được ngay cả khi ở các khu vực hội trường sóng yếu/mất mạng.
 
 ## Phạm vi
-- **Trong phạm vi đồ án**: Hệ thống Backend (Spring Boot), Frontend PWA (React), tích hợp thanh toán (SePay Webhook), tích hợp AI (Google Gemini), cơ chế Rate Limiting (Redis), Circuit Breaker (Resilience4j).
+- **Trong phạm vi đồ án**: Hệ thống Backend (Spring Boot), Frontend PWA (React), tích hợp thanh toán (SePay Webhook), tích hợp AI (Google Gemini), cơ chế Rate Limiting (Redis), Fallback Pattern (Graceful Degradation).
 - **Ngoài phạm vi**: Tích hợp trực tiếp vào hệ thống quản lý đào tạo cốt lõi của trường (FAP), cổng thanh toán nội địa chuyên biệt (VNPay/Momo) thay vì dùng SePay.
 
 ## Rủi ro và ràng buộc

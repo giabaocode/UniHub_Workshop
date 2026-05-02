@@ -77,7 +77,7 @@ graph TD
     subgraph Backend ["Backend API (Spring Boot)"]
         API("REST Controllers")
         RateLimit{"Rate Limiter (Redis)"}
-        CB{"Circuit Breaker (Resilience4j)"}
+        CB{"Fallback Pattern (Graceful Degradation)"}
         Service("Business Logic / Services")
         Job("Cron Job Scheduler")
     end
@@ -170,11 +170,11 @@ Hệ thống sử dụng **RBAC (Role-Based Access Control)** kết hợp với 
 - **Cách hoạt động**: Khi request tới API `/api/tickets/register`, Interceptor sẽ bắt lại. Lấy IP làm key (`rate_limit:IP`) và dùng lệnh `INCR` của Redis với vòng đời (TTL) 10 giây.
 - **Cơ chế**: Dạng *Fixed Window Counter*. Nếu số đếm > 5, lập tức chặn request, trả về mã 429 Too Many Requests. Do xử lý hoàn toàn trên RAM (Redis) trước khi chạm tới Controller, Database được an toàn tuyệt đối.
 
-### 2. Xử lý cổng thanh toán không ổn định (Circuit Breaker)
-- **Vấn đề**: Cổng thanh toán sập kéo theo tính năng đăng ký treo 30 giây (Timeout), làm cạn Connection Pool.
-- **Giải pháp**: Dùng thư viện **Resilience4j** với mô hình Circuit Breaker + Graceful Degradation.
-- **Cách hoạt động**: Bọc hàm gọi API sinh mã QR bằng `@CircuitBreaker`. Khi ngân hàng sập, Circuit Breaker "mở mạch" (Open). Các request sinh viên sau đó sẽ không gọi ra ngoài nữa mà chạy ngay vào hàm `fallback()`.
-- **Graceful Degradation**: Hàm fallback trả về cờ "PAY_AT_COUNTER" (Thanh toán tại quầy). Sinh viên vẫn lấy được chỗ, hệ thống vẫn vận hành bình thường, không bỏ lỡ khách.
+### 2. Xử lý cổng thanh toán không ổn định (Fallback & Graceful Degradation)
+- **Vấn đề**: Cổng thanh toán sập kéo theo lỗi giao dịch hoặc chập chờn.
+- **Giải pháp**: Sử dụng mô hình **Manual Fallback Pattern** kết hợp **Graceful Degradation**.
+- **Cách hoạt động**: Bọc hàm gọi API sinh mã QR bằng khối `try-catch`. Khi ngân hàng sập hoặc API timeout, hệ thống bắt Exception và tự động định tuyến luồng xử lý chạy ngay vào hàm `fallbackPaymentGateway()`.
+- **Graceful Degradation**: Hàm fallback trả về cờ "PAY_AT_COUNTER" (Thanh toán tại quầy). Sinh viên vẫn lấy được chỗ, hệ thống vẫn vận hành bình thường, không bỏ lỡ khách. Bỏ qua việc dùng thư viện Resilience4j để tiết kiệm tài nguyên RAM cho server.
 
 ### 3. Chống trừ tiền hai lần (Idempotency Key)
 - **Vấn đề**: Mạng lag, cổng thanh toán gửi Webhook 2 lần cho cùng 1 hóa đơn, khiến hệ thống cấp 2 vé và chiếm 2 chỗ ngồi.

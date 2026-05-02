@@ -1,26 +1,25 @@
-// URL gốc của Backend — lấy từ biến môi trường Vite
 const BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/workshops`;
 const TICKET_URL = `${import.meta.env.VITE_API_BASE_URL}/tickets`;
 
-// HÀM QUAN TRỌNG: Lấy token từ localStorage để chứng minh bạn đã đăng nhập
+// Tích hợp sẵn thẻ Ngrok vào Header chung
 const getAuthHeader = () => {
   const user = JSON.parse(localStorage.getItem('user'));
-  // Chú ý: Nếu Backend của bạn đặt tên biến là accessToken thì sửa user.token thành user.accessToken nhé
+  const headers = { 'ngrok-skip-browser-warning': 'true' }; // Vượt tường Ngrok
+  
   if (user && user.token) { 
-    return { Authorization: `Bearer ${user.token}` };
+    headers['Authorization'] = `Bearer ${user.token}`;
   }
-  return {}; // Trả về rỗng nếu chưa đăng nhập
+  return headers;
 };
 
 export const workshopService = {
-  // Hàm tạo mới Workshop
   createWorkshop: async (payload) => {
     try {
       const response = await fetch(BASE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getAuthHeader(), // <--- Ném thẻ ra vào vào đây
+          ...getAuthHeader(),
         },
         body: JSON.stringify(payload),
       });
@@ -41,7 +40,7 @@ export const workshopService = {
       const response = await fetch(BASE_URL, {
         method: "GET",
         headers: {
-            ...getAuthHeader(), // Kẹp vào cho chắc ăn
+            ...getAuthHeader(), // Đã kẹp sẵn thẻ Ngrok bên trong
         }
       });
       if (!response.ok) {
@@ -54,15 +53,16 @@ export const workshopService = {
     }
   },
 
-getWorkshopById: async (id) => {
+  getWorkshopById: async (id) => {
     try {
-      // 1. CHỈ GỌI API ĐƠN GIẢN, KHÔNG GỬI TOKEN
       const response = await fetch(`${BASE_URL}/${id}`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" }
+        headers: { 
+            "Content-Type": "application/json",
+            'ngrok-skip-browser-warning': 'true' // API public nên phải ném tay vào
+        }
       });
       
-      // 2. BÁO LỖI RÕ RÀNG ĐỂ BẮT ĐÚNG BỆNH
       if (!response.ok) {
         if (response.status === 403) {
            throw new Error("Lỗi 403: Vẫn bị Spring Security chặn rồi!");
@@ -78,13 +78,14 @@ getWorkshopById: async (id) => {
       throw error;
     }
   },
+
   updateWorkshop: async (id, payload) => {
     try {
       const response = await fetch(`${BASE_URL}/${id}`, {
         method: "PUT",
         headers: { 
             "Content-Type": "application/json",
-            ...getAuthHeader(), // <--- Ném thẻ ra vào vào đây
+            ...getAuthHeader(),
         },
         body: JSON.stringify(payload),
       });
@@ -99,13 +100,12 @@ getWorkshopById: async (id) => {
     }
   },
 
-  // Hàm xóa (Delete)
   deleteWorkshop: async (id) => {
     try {
       const response = await fetch(`${BASE_URL}/${id}`, { 
         method: "DELETE",
         headers: {
-            ...getAuthHeader(), // <--- Ném thẻ ra vào vào đây
+            ...getAuthHeader(),
         }
       });
       if (!response.ok) {
@@ -124,7 +124,7 @@ getWorkshopById: async (id) => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          ...getAuthHeader(), // Phải có token của Admin
+          ...getAuthHeader(),
         }
       });
       if (!response.ok) throw new Error("Không thể tải danh sách người tham dự");
@@ -135,7 +135,6 @@ getWorkshopById: async (id) => {
     }
   },
 
-  // Check-in cho một vé
   checkInAttendee: async (ticketId) => {
     try {
       const response = await fetch(`${TICKET_URL}/${ticketId}/checkin`, {

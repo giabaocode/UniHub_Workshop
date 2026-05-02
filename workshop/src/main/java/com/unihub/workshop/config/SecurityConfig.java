@@ -37,13 +37,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/webhooks/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/workshops/**").permitAll() // Allow viewing workshops
-                        .requestMatchers("/uploads/**").permitAll() // Allow serving uploaded files
-                        .requestMatchers("/api/tickets/**").authenticated()
-                        .requestMatchers("/uploads/**").permitAll() 
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated()
+                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/workshops/**").permitAll() // Allow viewing workshops
+                    .requestMatchers("/api/tickets/**").authenticated()
+                    .requestMatchers("/uploads/**").permitAll() // Đã gỡ bỏ dòng lặp thừa
+                    .requestMatchers("/error").permitAll()
+                    .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -57,9 +56,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        // Cho phép mọi nguồn (bao gồm cả IP LAN từ điện thoại và domain của Ngrok)
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        
+        // 🔥 ĐIỂM QUAN TRỌNG: Mở khóa TẤT CẢ các thẻ Header để thẻ Ngrok không bị chặn
+        configuration.setAllowedHeaders(List.of("*")); 
+        
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

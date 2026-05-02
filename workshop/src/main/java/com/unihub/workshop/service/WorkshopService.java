@@ -43,6 +43,8 @@ public class WorkshopService {
         workshop.setTotalSeats(workshopDetails.getTotalSeats());
         workshop.setPrice(workshopDetails.getPrice());
         workshop.setCoverImageUrl(workshopDetails.getCoverImageUrl());
+        workshop.setPdfUrl(workshopDetails.getPdfUrl());
+        workshop.setAiSummary(workshopDetails.getAiSummary());
         
         return workshopRepository.save(workshop);
     }

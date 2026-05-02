@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import StudentHome from './pages/StudentHome';
 import WorkshopDetail from './pages/WorkshopDetail';
@@ -16,9 +16,20 @@ import AuthPage from './pages/AuthPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import GithubCallback from './pages/GithubCallback';
 import ProtectedRoute from './components/ProtectedRoute';
+import CheckInPage from './pages/CheckInPage';
 import AdminEditWorkshop from './pages/AdminEditWorkshop'; // Nhớ import ở đầu file
 
 import { AuthProvider } from './context/authContext';
+import { useContext } from 'react';
+import { AuthContext } from './context/authContext';
+
+// Redirect Admin/Staff ra đúng trang khi vào '/'
+const HomeRedirect = () => {
+  const { user } = useContext(AuthContext);
+  if (user?.role?.trim() === 'ADMIN') return <Navigate to="/admin" replace />;
+  if (user?.role?.trim() === 'STAFF') return <Navigate to="/checkin" replace />;
+  return <MainLayout><StudentHome /></MainLayout>;
+};
 
 // Wrapper layout for pages with header
 const MainLayout = ({ children }) => (
@@ -39,10 +50,11 @@ function App() {
           <Route path="/login" element={<AuthPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/github/callback" element={<GithubCallback />} />
+          <Route path="/checkin" element={<ProtectedRoute><CheckInPage /></ProtectedRoute>} />
           
 
           {/* Các route có header */}
-          <Route path="/" element={<MainLayout><StudentHome /></MainLayout>} />
+          <Route path="/" element={<HomeRedirect />} />
           <Route path="/workshop/:id" element={<MainLayout><WorkshopDetail /></MainLayout>} />
           <Route path="/my-tickets" element={<ProtectedRoute><MainLayout><MyTickets /></MainLayout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><MainLayout><UserProfile /></MainLayout></ProtectedRoute>} />

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kịch bản Video Demo - UniHub Workshop</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            text-align: center;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #1e40af;
+            margin-top: 30px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 10px;
+        }
+        h3 {
+            color: #4b5563;
+        }
+        .scene {
+            background-color: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .script {
+            font-style: italic;
+            color: #047857;
+            padding-left: 20px;
+            border-left: 2px solid #10b981;
+        }
+        .action {
+            font-weight: bold;
+            color: #b91c1c;
+        }
+        @media print {
+            body {
+                background-color: #fff;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+            }
+            @page {
+                margin: 2cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 KỊCH BẢN QUAY VIDEO DEMO UNIHUB WORKSHOP (1080p)</h1>
+        
+        <h2>Phần 1: Giới thiệu (0:00 - 0:30)</h2>
+        <div class="scene">
+            <p><span class="action">📺 Hình ảnh:</span> Mở trang chủ (Student Home) của hệ thống UniHub. Camera quay mặt bạn.</p>
+            <p><span class="action">🎙 Lời bình:</span></p>
+            <p class="script">"Chào thầy cô, hôm nay nhóm chúng em xin demo hệ thống UniHub Workshop. Thay vì giới thiệu các tính năng CRUD cơ bản, nhóm xin phép đi thẳng vào việc demo 6 giải pháp kỹ thuật nâng cao (Advanced Requirements) mà nhóm đã giải quyết thành công để đảm bảo hệ thống chịu tải cao và hoạt động ổn định."</p>
+        </div>
+
+        <h2>Phần 2: Giải quyết "Tranh chấp chỗ ngồi" (0:30 - 1:30)</h2>
+        <div class="scene">
+            <p><span class="action">⚙️ Chuẩn bị:</span> Set số vé <code>bookedSpots</code> của Workshop A là 59 và <code>totalSeats</code> là 60 trong DB. Mở 2 tab ẩn danh với 2 tài khoản khác nhau.</p>
+            <p><span class="action">📺 Thao tác:</span> Bấm "Đăng ký" gần như cùng 1 lúc. Cửa sổ 1 báo thành công. Cửa sổ 2 báo lỗi "Vé cuối cùng đã có người nhanh tay hơn!".</p>
+            <p><span class="action">🎙 Lời bình:</span></p>
+            <p class="script">"Vấn đề đầu tiên là Overbooking. Giả sử workshop chỉ còn đúng 1 vé nhưng có 2 sinh viên cùng bấm. Nhờ cơ chế Optimistic Locking (@Version trong JPA), người thứ 2 sẽ bị DB từ chối giao dịch, đảm bảo không bao giờ bị bán lố vé."</p>
+        </div>
+
+        <h2>Phần 3: Chống Tải Đột Biến với Redis (1:30 - 2:30)</h2>
+        <div class="scene">
+            <p><span class="action">📺 Thao tác:</span> Bắn liên tục 6 requests qua Postman (hoặc F5 trình duyệt). Ở request thứ 6, trả về lỗi <code>429 Too Many Requests</code>.</p>
+            <p><span class="action">🎙 Lời bình:</span></p>
+            <p class="script">"Khi mở bán vé, 12.000 sinh viên truy cập cùng lúc có thể làm sập Server. Nhóm đã tích hợp Redis và viết một Interceptor dạng Fixed Window. Nếu 1 IP gọi quá 5 lần/10 giây, request sẽ bị chặn lại ngay từ RAM (Redis), không bao giờ chạm được xuống Database."</p>
+        </div>
+
+        <h2>Phần 4: Thanh toán lỗi & Circuit Breaker (2:30 - 3:30)</h2>
+        <div class="scene">
+            <p><span class="action">⚙️ Chuẩn bị:</span> Sửa tạm đường dẫn API SePay thành URL sai trong code để giả lập sập cổng ngân hàng.</p>
+            <p><span class="action">📺 Thao tác:</span> Bấm "Đăng ký" vé có phí. Màn hình hiện: "Cổng thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại sự kiện!".</p>
+            <p><span class="action">🎙 Lời bình:</span></p>
+            <p class="script">"Nếu cổng ngân hàng sập, hệ thống của em không sập theo. Nhờ tích hợp Resilience4j Circuit Breaker, khi gọi API lỗi, nó lập tức kích hoạt chế độ Graceful Degradation (hạ cấp dịch vụ), cấp cho sinh viên một vé trạng thái PENDING để thu tiền mặt tại quầy."</p>
+        </div>
+
+        <h2>Phần 5: Chống trừ tiền 2 lần - Idempotency (3:30 - 4:30)</h2>
+        <div class="scene">
+            <p><span class="action">📺 Thao tác:</span> Mở Postman, bắn 2 lần liên tiếp cùng một Webhook với chung mã <code>ticketCode</code>. Lần 2 server vẫn báo 200 OK nhưng log ghi "Giao dịch trùng lặp, bỏ qua".</p>
+            <p><span class="action">🎙 Lời bình:</span></p>
+            <p class="script">"Do mạng lag, ngân hàng có thể gửi Webhook 2 lần khiến sinh viên bị trừ tiền kép. Nhóm giải quyết bằng Idempotency Key. Nếu mã vé đã có trong DB, hệ thống lập tức ngắt lệnh, đảm bảo tính toàn vẹn dữ liệu."</p>
+        </div>
+
+        <h2>Phần 6: Check-in Offline PWA (4:30 - 5:30)</h2>
+        <div class="scene">
+            <p><span class="action">📺 Thao tác:</span> Mở trang Admin Check-in. Vào F12 (Network) chỉnh sang Offline. Bấm check-in 2 sinh viên (UI vẫn báo thành công). Bật mạng lại, popup báo "Đồng bộ thành công" hiện lên.</p>
+            <p><span class="action">🎙 Lời bình:</span></p>
+            <p class="script">"Khi điểm danh mất sóng, App của nhóm hoạt động dưới dạng PWA Offline-First. Nó lưu tạm vào LocalStorage. Khi có WiFi trở lại, Event Listener sẽ tự động bắn dữ liệu đệm lên Backend, Ban tổ chức không cần thao tác thêm gì cả."</p>
+        </div>
+
+        <h2>Phần 7: Tổng kết (5:30 - 6:30)</h2>
+        <div class="scene">
+            <p><span class="action">📺 Thao tác:</span> Mở màn hình file CSV và màn hình Workshop có phần tóm tắt của AI.</p>
+            <p><span class="action">🎙 Lời bình:</span></p>
+            <p class="script">"Ngoài 5 vấn đề cốt lõi trên, nhóm cũng đã cấu hình Spring Scheduler đồng bộ file CSV vào lúc 2 giờ sáng mỗi đêm, và tích hợp Google Gemini AI tự động đọc file PDF để tóm tắt chương trình bằng hashtag. Đó là toàn bộ phần demo hệ thống UniHub Workshop của nhóm. Cảm ơn thầy cô đã theo dõi!"</p>
+        </div>
+    </div>
+</body>
+</html>

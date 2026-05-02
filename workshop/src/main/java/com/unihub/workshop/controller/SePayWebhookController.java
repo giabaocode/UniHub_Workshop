@@ -17,6 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/webhooks")
+@CrossOrigin(origins = "http://localhost:5173")
 public class SePayWebhookController {
 
     private final TicketRepository ticketRepository;

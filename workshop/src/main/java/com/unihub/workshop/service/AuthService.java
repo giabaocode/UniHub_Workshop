@@ -60,17 +60,27 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+        String studentId = request.getStudentId();
+        
+        // 1. Phải có MSSV mới được đăng ký
+        if (studentId == null || studentId.isBlank()) {
+            throw new RuntimeException("Vui lòng nhập Mã số sinh viên!");
         }
 
-        User user = new User(
-                request.getFullName(),
-                request.getEmail(),
-                passwordEncoder.encode(request.getPassword()),
-                "USER"
-        );
-        user.setStudentId(request.getStudentId());
+        // 2. Tìm sinh viên trong Database (Đã được CsvSyncJob đồng bộ từ đêm)
+        User user = userRepository.findByStudentId(studentId.trim())
+                .orElseThrow(() -> new RuntimeException("Mã số sinh viên '" + studentId + "' không có trong danh sách của trường!"));
+
+        // 3. Kiểm tra xem tài khoản này đã được kích hoạt chưa
+        // (Nếu pass không phải là pass mặc định do Job tạo, hoặc họ đã đổi tên)
+        if (user.getPassword() != null && !passwordEncoder.matches("123456", user.getPassword())) {
+            throw new RuntimeException("Tài khoản này đã được đăng ký và kích hoạt trước đó! Vui lòng đăng nhập.");
+        }
+
+        // 4. Kích hoạt tài khoản: Cập nhật thông tin và mật khẩu mới do sinh viên tự đặt
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail()); // Cho phép họ cập nhật email cá nhân nếu muốn
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setFaculty(request.getFaculty());
 
         userRepository.save(user);
@@ -86,6 +96,33 @@ public class AuthService {
                 user.getPhoneNumber(),
                 user.getStudentId(),
                 user.getFaculty()
+        );
+    }
+
+
+
+    public AuthResponse createStaff(RegisterRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        User user = new User(
+                request.getFullName(),
+                request.getEmail(),
+                passwordEncoder.encode(request.getPassword()),
+                "STAFF"
+        );
+        userRepository.save(user);
+
+        return new AuthResponse(
+                null, // Không trả về token để bắt staff tự login
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                user.getPhoneNumber(),
+                null,
+                null
         );
     }
 

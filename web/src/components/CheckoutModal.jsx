@@ -96,13 +96,35 @@ const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId
                 </p>
               </div>
 
-              {/* Chỉ có nút Huỷ */}
-              <button
-                onClick={onClose}
-                className="w-full py-4 text-gray-400 font-bold hover:text-red-500 transition-all border-2 border-transparent hover:border-red-100 rounded-2xl"
-              >
-                Huỷ giao dịch
-              </button>
+              {/* Các nút điều khiển */}
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={async () => {
+                    try {
+                      // Gọi API giả lập webhook
+                      const res = await fetch("http://localhost:8080/api/webhooks/sepay", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ content: paymentData.memo })
+                      });
+                      if (!res.ok) throw new Error("Lỗi khi gọi giả lập webhook: " + res.statusText);
+                      console.log("Đã giả lập gửi Webhook SePay thành công!");
+                    } catch (error) {
+                      alert("Lỗi mô phỏng thanh toán: " + error.message);
+                    }
+                  }}
+                  className="w-full py-3.5 bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-100 transition-all rounded-2xl border border-emerald-200 flex justify-center items-center gap-2"
+                >
+                  <CheckCircle2 size={18} />
+                  Giả lập Đã chuyển tiền (Test Local)
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full py-3.5 text-gray-400 font-bold hover:text-red-500 transition-all border-2 border-transparent hover:border-red-100 rounded-2xl"
+                >
+                  Huỷ giao dịch
+                </button>
+              </div>
             </>
           )}
         </div>

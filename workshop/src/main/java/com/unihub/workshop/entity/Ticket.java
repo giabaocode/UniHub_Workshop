@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "ticket", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"user_id", "workshop_id"})
+}, indexes = {
+    @Index(name = "idx_ticket_code", columnList = "ticket_code"),
+    @Index(name = "idx_ticket_user_id", columnList = "user_id")
 })
 public class Ticket {
 
