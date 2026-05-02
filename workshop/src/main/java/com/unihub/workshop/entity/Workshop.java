@@ -28,6 +28,11 @@ public class Workshop {
     @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String pdfUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String aiSummary;
     @Formula("(SELECT COUNT(t.id) FROM ticket t WHERE t.workshop_id = id)")
     private Integer bookedSpots;
     
@@ -137,6 +142,21 @@ public class Workshop {
         this.coverImageUrl = coverImageUrl;
     }
 
+    public String getPdfUrl() {
+        return pdfUrl;
+    }
+
+    public void setPdfUrl(String pdfUrl) {
+        this.pdfUrl = pdfUrl;
+    }
+
+    public String getAiSummary() {
+        return aiSummary;
+    }
+
+    public void setAiSummary(String aiSummary) {
+        this.aiSummary = aiSummary;
+    }
     public Integer getBookedSpots() {
         return bookedSpots != null ? bookedSpots : 0;   
     }

@@ -60,6 +60,24 @@ const requestPasswordReset = async () => {
     return data;
 };
 
+const forgotPassword = async (email) => {
+    const response = await fetch(`${AUTH_API_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    });
+
+    // Safely parse JSON — body may be empty on some errors
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+        throw new Error(data.message || `Lỗi ${response.status}: Vui lòng thử lại sau.`);
+    }
+
+    return data;
+};
+
 const resetPassword = async (token, newPassword) => {
     const response = await fetch(`${AUTH_API_URL}/reset-password`, {
         method: 'POST',
@@ -78,27 +96,31 @@ const resetPassword = async (token, newPassword) => {
 };
 
 const uploadAvatar = async (file) => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
 
-    const response = await fetch(`${UPLOAD_API_URL}/avatar`, {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
-        headers: getAuthHeader(), // Do not set Content-Type, fetch will set it automatically with boundary for FormData
         body: formData,
     });
 
     const data = await response.json();
     if (!response.ok) {
-        throw new Error(data.message || 'Lỗi khi tải ảnh lên');
+        throw new Error(data.error?.message || 'Lỗi khi tải ảnh lên Cloudinary');
     }
 
-    return data;
+    return { url: data.secure_url };
 };
 
 const userService = {
     getProfile,
     updateProfile,
     requestPasswordReset,
+    forgotPassword,
     resetPassword,
     uploadAvatar
 };

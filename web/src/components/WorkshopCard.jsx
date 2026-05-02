@@ -68,7 +68,6 @@ const WorkshopCard = ({ workshop }) => {
         <div className="mt-auto pt-4 border-t border-gray-200/50">
           {workshop.registrationDeadline && (
             <div className="mb-5">
-              {/* ĐÃ CHUYỂN TITLE VÀO BÊN TRONG COMPONENT */}
               <CountdownTimer
                 targetDate={workshop.registrationDeadline}
                 title="Đóng đăng ký sau"
@@ -80,6 +79,7 @@ const WorkshopCard = ({ workshop }) => {
           <div className="mb-5">
             <div className="flex justify-between text-xs font-bold mb-2 uppercase tracking-wider">
               <span className="text-gray-500">Tình trạng vé</span>
+              {/* Giữ lại đoạn code xịn xò của nhánh main ở đây */}
               <span className={isFull ? "text-red-600 font-bold" : (isAlmostFull ? "text-red-600 font-bold animate-pulse" : "text-blue-600 font-bold")}>
                 {isFull ? "ĐÃ BÁN HẾT" : `Chỉ còn ${spotsLeft} chỗ`}
               </span>

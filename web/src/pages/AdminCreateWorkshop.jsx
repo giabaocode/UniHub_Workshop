@@ -7,13 +7,14 @@ import CustomTimePicker from '../components/CustomTimePicker';
 import ImageUploader from '../components/ImageUploader';
 import AiPdfUploader from '../components/AiPdfUploader';
 import { workshopService } from '../services/workshopService';
-import { handleNumberKeyDown } from '../utils/helpers';
+import { handleNumberKeyDown } from '../utils/helpers'; 
 
 const AdminCreateWorkshop = () => {
+  // GỘP STATE: Giữ lại pdfUrl, aiSummary của nhánh feat VÀ isSubmitting của nhánh main
   const [formData, setFormData] = useState({
     title: "", speaker: "", eventDate: "", startTime: "", room: "",
     totalSeats: "", price: "", registrationDeadlineDate: "", registrationDeadlineTime: "",
-    description: "", coverImageUrl: "",
+    description: "", coverImageUrl: "", pdfUrl: "", aiSummary: "",
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,9 +36,28 @@ const AdminCreateWorkshop = () => {
     setErrors(prev => ({ ...prev, coverImageUrl: '' }));
   };
 
+  // GIỮ LẠI LOGIC XỬ LÝ AI PDF TỪ NHÁNH FEAT
+  const handleAiPdfResult = (result) => {
+    if (result) {
+      setFormData(prev => ({
+        ...prev,
+        pdfUrl: result.pdfUrl || '',
+        // Tóm tắt chi tiết cho vào description (Nội dung chương trình)
+        description: result.detailedSummary || prev.description,
+        // Tóm tắt ngắn cho vào aiSummary (AI Card)
+        aiSummary: `[SUMMARY]\n${result.briefSummary}\n[HASHTAGS]\n${(result.hashtags || []).join(', ')}`,
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, pdfUrl: '', aiSummary: '' }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // GIỮ LẠI LOGIC CHỐNG BẤM ĐÚP TỪ NHÁNH MAIN
     if (isSubmitting) return;
+
     const todayDateStr = new Date().toISOString().split('T')[0];
     const todayDateTime = new Date();
     const currentTimeStr = `${String(todayDateTime.getHours()).padStart(2, '0')}:${String(todayDateTime.getMinutes()).padStart(2, '0')}`;
@@ -157,35 +177,50 @@ const AdminCreateWorkshop = () => {
                 {errors.price && <p className="text-red-500 text-xs mt-1 font-medium">{errors.price}</p>}
               </div>
             </div>
+            
+            {/* GIỮ LẠI TEXTAREA TỪ NHÁNH FEAT */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả workshop / Nội dung chương trình</label>
+              <textarea
+                name='description'
+                value={formData.description}
+                onChange={handleChange}
+                rows={6}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm resize-none"
+                placeholder="Nhập mô tả chi tiết hoặc upload PDF để AI tự điền..."
+              />
+            </div>
           </div>
         </div>
 
         {/* CỘT PHẢI (LINH KIỆN ĐÃ ĐƯỢC TÁCH) */}
         <div className="lg:col-span-5 space-y-6">
           <ImageUploader value={formData.coverImageUrl} onChange={handleImageChange} error={errors.coverImageUrl} />
-          <AiPdfUploader />
+          {/* TRUYỀN HÀM XỬ LÝ VÀO COMPONENT AI */}
+          <AiPdfUploader onResult={handleAiPdfResult} />
         </div>
       </div>
 
       <div className="flex justify-end items-center gap-4 pt-4">
-        <button onClick={() => navigate('/admin')} className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all">Hủy</button>
-        <button onClick={handleSubmit}
+        <button onClick={() => navigate('/admin')} disabled={isSubmitting} className="px-8 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all disabled:opacity-50">Hủy</button>
+        
+        {/* NÚT SUBMIT ĐƯỢC STYLE LẠI BẰNG TAILWIND CHO ĐẸP VÀ CHUẨN UX */}
+        <button 
+          onClick={handleSubmit}
           disabled={isSubmitting}
-          style={{
-            opacity: isSubmitting ? 0.7 : 1,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer'
-          }}
-          className="px-8 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5">
-
+          className={`px-8 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2
+            ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700 hover:-translate-y-0.5 shadow-blue-500/30'}
+          `}
+        >
           {isSubmitting ? (
             <>
-              {/* Icon Loading xoay xoay (nhớ import Loader2 từ lucide-react ở trên đầu file nhé) */}
               <Loader2 className="animate-spin" size={18} />
               Đang xử lý...
             </>
           ) : (
             'Lưu & Đăng Sự kiện'
-          )}</button>
+          )}
+        </button>
       </div>
     </div>
   );

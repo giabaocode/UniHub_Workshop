@@ -44,6 +44,46 @@ const logout = () => {
     localStorage.removeItem('user');
 };
 
+const googleLogin = async (credential) => {
+    const response = await fetch(`${API_URL}/google`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: credential }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Đăng nhập bằng Google thất bại.');
+    }
+
+    const data = await response.json();
+    if (data.token) {
+        localStorage.setItem('user', JSON.stringify(data));
+    }
+    return data;
+};
+
+const githubLogin = async (code) => {
+    const response = await fetch(`${API_URL}/github`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Đăng nhập bằng GitHub thất bại.');
+    }
+
+    const data = await response.json();
+    if (data.token) {
+        localStorage.setItem('user', JSON.stringify(data));
+    }
+    return data;
+};
+
 const getCurrentUser = () => {
     return JSON.parse(localStorage.getItem('user'));
 };
@@ -51,6 +91,8 @@ const getCurrentUser = () => {
 const authService = {
     register,
     login,
+    googleLogin,
+    githubLogin,
     logout,
     getCurrentUser,
 };

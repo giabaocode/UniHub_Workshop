@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { Camera, Save, Lock, LogOut, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, Save, Lock, LogOut, CheckCircle, AlertCircle, Mail, X, ShieldCheck, Loader2  } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/authContext';
 import userService from '../services/user.service';
@@ -25,6 +25,7 @@ const UserProfile = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -63,7 +64,7 @@ const UserProfile = () => {
   };
 
   // ============================================================
-  // LOGIC UPLOAD ẢNH LÊN CLOUDINARY (THAY THẾ CHO LOCALHOST)
+  // LOGIC UPLOAD ẢNH LÊN CLOUDINARY
   // ============================================================
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -82,6 +83,7 @@ const UserProfile = () => {
     uploadData.append("upload_preset", UPLOAD_PRESET);
 
     try {
+      // Sử dụng fetch trực tiếp lên Cloudinary từ nhánh main
       const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
         method: "POST",
         body: uploadData,
@@ -91,20 +93,17 @@ const UserProfile = () => {
       if (data.secure_url) {
         const newAvatarUrl = data.secure_url;
 
-        // 1. Cập nhật state tại chỗ của trang Profile
+        // Cập nhật State và Backend
         setProfile(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
-
-        // 2. Cập nhật vào Context để Header "nhảy" ảnh (Quan trọng)
-        // Chúng ta truyền object chứa fullName và avatarUrl mới vào
-        updateUser({
-          fullName: profile.fullName,
-          avatarUrl: newAvatarUrl
-        });
-
-        // 3. Lưu vào DB
         await userService.updateProfile({ ...profile, avatarUrl: newAvatarUrl });
 
-        setMessage({ type: 'success', text: 'Cập nhật thành công!' });
+        // Cập nhật Navbar ngay lập tức (Logic gọn gàng từ nhánh feat)
+        updateUser({ fullName: profile.fullName, avatarUrl: newAvatarUrl });
+
+        setMessage({ type: 'success', text: 'Đã cập nhật ảnh đại diện!' });
+        setTimeout(() => {
+          setMessage({ type: '', text: '' });
+        }, 3000);
       } else {
         throw new Error(data.error?.message || "Lỗi từ Cloudinary");
       }
@@ -122,6 +121,10 @@ const UserProfile = () => {
     setMessage({ type: '', text: '' });
     try {
       await userService.updateProfile(profile);
+
+      // Sync navbar immediately
+      updateUser({ fullName: profile.fullName, avatarUrl: profile.avatarUrl });
+
       setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
@@ -132,11 +135,13 @@ const UserProfile = () => {
   };
 
   const handlePasswordReset = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn nhận email đổi mật khẩu?')) return;
+    // Giữ nguyên logic sử dụng Modal xịn xò của nhánh feat
     setIsResettingPassword(true);
+    setMessage({ type: '', text: '' });
+    setShowPasswordModal(false);
     try {
-      const res = await userService.requestPasswordReset();
-      setMessage({ type: 'success', text: res.message || 'Đã gửi email xác nhận.' });
+      const res = await userService.forgotPassword(profile.email);
+      setMessage({ type: 'success', text: res.message || 'Đã gửi email. Vui lòng kiểm tra hộp thư.' });
     } catch (error) {
       setMessage({ type: 'error', text: 'Lỗi yêu cầu đổi mật khẩu.' });
     } finally {
@@ -154,7 +159,8 @@ const UserProfile = () => {
     );
   }
 
-  return (
+  // Khai báo mainContent để có thể render Modal ở bên dưới
+  const mainContent = (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-gray-900">Hồ sơ cá nhân</h1>
@@ -197,9 +203,13 @@ const UserProfile = () => {
           </button>
 
           <div className="w-full space-y-3 mt-10">
-            <button onClick={handlePasswordReset} disabled={isResettingPassword} className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all shadow-sm disabled:opacity-50">
+            <button 
+              onClick={() => setShowPasswordModal(true)}
+              disabled={isResettingPassword} 
+              className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all shadow-sm disabled:opacity-50"
+            >
               <Lock size={18} />
-              {isResettingPassword ? 'Đang gửi...' : 'Đổi mật khẩu'}
+              Đổi mật khẩu
             </button>
             {!isAdminRoute && (
               <button onClick={handleLogout} className="flex items-center justify-center gap-2 w-full px-6 py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors">
@@ -251,6 +261,71 @@ const UserProfile = () => {
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {mainContent}
+
+      {/* Password Reset Confirmation Modal */}
+      {showPasswordModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPasswordModal(false); }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-br from-blue-600 to-purple-600 px-8 pt-8 pb-10 text-center relative">
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                <ShieldCheck className="text-white" size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Xác nhận đặt lại mật khẩu</h3>
+              <p className="text-blue-100 text-sm mt-1">Chúng tôi sẽ gửi link đặt lại về email của bạn</p>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-8 py-6">
+              <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 mb-6">
+                <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                  <Mail className="text-blue-600" size={18} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Email nhận link</p>
+                  <p className="text-sm font-bold text-gray-800 truncate">{profile.email}</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Link đặt lại mật khẩu sẽ hết hạn sau <strong className="text-gray-700">1 giờ</strong>.
+                Vui lòng kiểm tra cả hộp thư spam nếu không thấy email.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowPasswordModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handlePasswordReset}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-sm font-bold text-white hover:opacity-90 transition-opacity shadow-md shadow-blue-500/25"
+                >
+                  Gửi email ngay
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

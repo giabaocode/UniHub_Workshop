@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import { workshopService } from '../services/workshopService';
+import { workshopService } from '../services/workshopService'; 
 
 // Import các Component con vừa tách
 import HeroSlider from '../components/HeroSlider';
@@ -11,9 +11,9 @@ const StudentHome = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // --- STATE BỘ LỌC VÀ PHÂN TRANG ---
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState('ALL'); 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const itemsPerPage = 6; 
 
   useEffect(() => {
     const fetchWorkshops = async () => {
@@ -43,17 +43,17 @@ const StudentHome = () => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
+    
     if (workshop.eventDate < todayStr) return false;
-
+    
     if (workshop.eventDate === todayStr && workshop.startTime && workshop.startTime.substring(0, 5) < currentTimeStr) {
       return false;
     }
 
     if (filter === 'FREE') return workshop.price === 0 || workshop.price === null;
     if (filter === 'PAID') return workshop.price > 0;
-
-    return true;
+    
+    return true; 
   });
 
   // --- BƯỚC 2: TỰ ĐỘNG SẮP XẾP TĂNG DẦN (GẦN NHẤT LÊN ĐẦU) ---

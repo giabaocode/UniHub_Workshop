@@ -1,26 +1,178 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Calendar, Clock, MapPin, User, Sparkles, CheckCircle2, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Sparkles, CheckCircle2, Users, RefreshCw, FileText, Loader2 } from 'lucide-react';
 import CheckoutModal from '../components/CheckoutModal';
 import CountdownTimer from '../components/CountdownTimer';
+import geminiService from '../services/gemini.service';
+import { workshopService } from '../services/workshopService';
 
 const WorkshopDetail = () => {
   const { id } = useParams();
+  const [workshop, setWorkshop] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
 
+  // AI Summary state
+  const [aiSummary, setAiSummary] = useState('');
+  const [aiHashtags, setAiHashtags] = useState([]);
+  const [aiLoading, setAiLoading] = useState(true);
+  const [aiError, setAiError] = useState('');
+
+  // Fetch workshop data from API
+  useEffect(() => {
+    const fetchWorkshop = async () => {
+      setIsLoading(true);
+      try {
+        const data = await workshopService.getWorkshopById(id);
+        setWorkshop(data);
+
+        // If workshop has aiSummary from DB, use it directly
+        if (data.aiSummary) {
+          // Parse aiSummary — may contain [SUMMARY]...[HASHTAGS]... or plain text
+          const summaryMatch = data.aiSummary.match(/\[SUMMARY\]([\s\S]*?)\[HASHTAGS\]/i);
+          const tagsMatch = data.aiSummary.match(/\[HASHTAGS\]([\s\S]*)/i);
+
+          if (summaryMatch) {
+            setAiSummary(summaryMatch[1].trim());
+          } else {
+            setAiSummary(data.aiSummary);
+          }
+
+          if (tagsMatch) {
+            setAiHashtags(tagsMatch[1].trim().split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean));
+          }
+          setAiLoading(false);
+        } else {
+          // No saved AI summary, generate from workshop description
+          fetchAiSummary(data);
+        }
+      } catch (err) {
+        setLoadError('Không thể tải thông tin workshop.');
+        setAiLoading(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchWorkshop();
+  }, [id]);
+
+  const fetchAiSummary = async (ws) => {
+    const workshopData = ws || workshop;
+    if (!workshopData) return;
+
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const result = await geminiService.summarizeWorkshop({
+        title: workshopData.title,
+        description: workshopData.description || '',
+        agenda: [],
+      });
+      setAiSummary(result.summary);
+      setAiHashtags(result.hashtags || []);
+    } catch (err) {
+      setAiError('Không thể tải AI Summary. ' + (err.message || ''));
+    } finally {
+      setAiLoading(false);
+    }
+  };
   const registrationDeadline = "2026-04-24T23:59:00";
   const isRegistrationExpired = new Date().getTime() > new Date(registrationDeadline).getTime();
 
   const handleRegisterClick = () => {
     setIsWaiting(true);
-    // Giả lập thời gian chờ xử lý xếp hàng (Tải đột biến)
     setTimeout(() => {
       setIsWaiting(false);
       setIsModalOpen(true);
     }, 2500);
   };
-  
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 size={40} className="text-blue-500 animate-spin" />
+          <p className="text-gray-500 font-medium">Đang tải workshop...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadError || !workshop) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 font-medium text-lg">{loadError || 'Không tìm thấy workshop.'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isRegistrationExpired = workshop.registrationDeadline
+    ? new Date().getTime() > new Date(workshop.registrationDeadline).getTime()
+    : false;
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '---';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('vi-VN');
+  };
+
+  const formatPrice = (price) => {
+    if (!price || price === 0) return 'Miễn phí';
+    return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ';
+  };
+
+// Dịch các định dạng danh sách, tiêu đề, xuống dòng
+const renderFormattedText = (text) => {
+  if (!text) return 'Chưa có thông tin.';
+
+  const lines = text.split('\n');
+  return lines.map((line, index) => {
+    // Xử lý tiêu đề (### Heading) -> Chữ to, in đậm, màu xanh
+    if (line.match(/^#{1,3}\s+/)) {
+      const content = line.replace(/^#{1,3}\s+/, '');
+      return <h4 key={index} className="text-xl font-bold text-blue-700 mt-5 mb-2">{content}</h4>;
+    }
+
+    // Xử lý Bullet point (- item hoặc * item) -> Thêm dấu chấm xanh
+    if (line.match(/^[-*]\s+/)) {
+      const content = line.replace(/^[-*]\s+/, '');
+      return (
+        <div key={index} className="flex items-start gap-2 mb-2 ml-2">
+          <span className="text-blue-500 mt-0.5 font-bold">•</span>
+          <span className="text-gray-700">{formatBoldText(content)}</span>
+        </div>
+      );
+    }
+
+    // Dòng trống
+    if (line.trim() === '') return <div key={index} className="h-2"></div>;
+
+    // Đoạn văn bình thường
+    return <p key={index} className="text-gray-600 leading-relaxed mb-2">{formatBoldText(line)}</p>;
+  });
+};
+
+// Dịch ký tự **text** -> In đậm, tô màu tím nhạt/xanh
+const formatBoldText = (text) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,23 +181,27 @@ const WorkshopDetail = () => {
           <div className="lg:w-2/3 space-y-8">
             <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
               <div className="h-64 md:h-96 relative">
-                <img 
-                  src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
-                  alt="Workshop cover" 
+                <img
+                  src={workshop.coverImageUrl || 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'}
+                  alt="Workshop cover"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-4 right-4">
-                  <span className="px-4 py-1.5 bg-emerald-100 text-emerald-700 font-bold rounded-full shadow-sm border border-emerald-200">
-                    Miễn phí
+                  <span className={`px-4 py-1.5 font-bold rounded-full shadow-sm border ${
+                    workshop.price > 0
+                      ? 'bg-blue-100 text-blue-700 border-blue-200'
+                      : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {formatPrice(workshop.price)}
                   </span>
                 </div>
               </div>
-              
+
               <div className="p-8">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
-                  Kỹ năng phỏng vấn xin việc cho sinh viên IT
+                  {workshop.title}
                 </h1>
-                
+
                 <div className="flex flex-wrap gap-6 text-gray-600 mb-8 pb-8 border-b border-gray-100">
                   <div className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
@@ -53,7 +209,7 @@ const WorkshopDetail = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400 font-medium">Diễn giả</p>
-                      <p className="font-semibold text-gray-900">Nguyễn Văn A</p>
+                      <p className="font-semibold text-gray-900">{workshop.speaker || '---'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -62,7 +218,7 @@ const WorkshopDetail = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400 font-medium">Ngày tổ chức</p>
-                      <p className="font-semibold text-gray-900">25/04/2026</p>
+                      <p className="font-semibold text-gray-900">{formatDate(workshop.eventDate)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -71,38 +227,39 @@ const WorkshopDetail = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400 font-medium">Thời gian</p>
-                      <p className="font-semibold text-gray-900">08:00 - 11:30</p>
+                      <p className="font-semibold text-gray-900">{workshop.startTime || '---'}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <h3 className="text-2xl font-bold text-gray-900">Nội dung chương trình</h3>
-                  <p className="text-gray-600 leading-relaxed text-lg">
-                    Buổi workshop cung cấp các kiến thức thực tế về quy trình phỏng vấn tại các công ty công nghệ lớn. Bạn sẽ được hướng dẫn cách tối ưu CV, trả lời các câu hỏi hành vi, và vượt qua vòng phỏng vấn kỹ thuật thuật toán.
-                  </p>
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-3 text-gray-600">
-                      <CheckCircle2 className="text-emerald-500 mt-1 flex-shrink-0" size={20} />
-                      <span>Cách viết CV chuẩn ATS cho lập trình viên.</span>
-                    </li>
-                    <li className="flex items-start gap-3 text-gray-600">
-                      <CheckCircle2 className="text-emerald-500 mt-1 flex-shrink-0" size={20} />
-                      <span>Các dạng câu hỏi phỏng vấn thuật toán (Whiteboard interview).</span>
-                    </li>
-                    <li className="flex items-start gap-3 text-gray-600">
-                      <CheckCircle2 className="text-emerald-500 mt-1 flex-shrink-0" size={20} />
-                      <span>Thực hành phỏng vấn trực tiếp 1-1 với nhà tuyển dụng.</span>
-                    </li>
-                  </ul>
+                  <div className="text-lg">
+    {renderFormattedText(workshop.description)}
+  </div>
                 </div>
-                
+
+                {/* PDF download link */}
+                {workshop.pdfUrl && (
+                  <div className="mt-6">
+                    <a
+                      href={workshop.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-medium text-sm hover:bg-blue-100 transition-colors border border-blue-100"
+                    >
+                      <FileText size={18} />
+                      Xem tài liệu PDF chi tiết
+                    </a>
+                  </div>
+                )}
+
                 <div className="mt-10">
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">Sơ đồ phòng</h3>
                   <div className="bg-gray-100 rounded-2xl h-64 flex items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden group cursor-pointer">
                     <div className="text-center group-hover:scale-105 transition-transform">
                       <MapPin size={48} className="mx-auto text-blue-400 mb-3" />
-                      <p className="font-semibold text-gray-600">Hội trường lớn - Tòa A</p>
+                      <p className="font-semibold text-gray-600">{workshop.room || 'Chưa xác định'}</p>
                       <p className="text-sm text-gray-400">Click để xem bản đồ chi tiết</p>
                     </div>
                   </div>
@@ -113,31 +270,90 @@ const WorkshopDetail = () => {
 
           {/* Cột phải: AI Summary & Đăng ký */}
           <div className="lg:w-1/3 space-y-6">
-            {/* Khung nổi bật AI Summary */}
+            {/* Khung AI Summary */}
             <div className="relative group">
-              {/* Gradient border */}
               <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-              
+
               <div className="relative bg-white rounded-2xl p-6 shadow-xl">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="text-purple-500 animate-pulse" size={24} />
-                  <h3 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
-                    AI Summary
-                  </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="text-purple-500 animate-pulse" size={24} />
+                    <h3 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
+                      AI Summary
+                    </h3>
+                  </div>
+                  {!workshop.aiSummary && (
+                    <button
+                      onClick={() => fetchAiSummary()}
+                      disabled={aiLoading}
+                      title="Tạo lại"
+                      className="text-gray-400 hover:text-purple-500 transition-colors disabled:opacity-40"
+                    >
+                      <RefreshCw size={16} className={aiLoading ? 'animate-spin' : ''} />
+                    </button>
+                  )}
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                  🤖 <strong>AI Tóm tắt:</strong> Workshop kéo dài 3.5 giờ, tập trung mạnh vào kỹ năng thực chiến. Đặc biệt phù hợp cho sinh viên năm 3, năm 4 chuẩn bị đi thực tập. Điểm nhấn: Sẽ có 5 phần quà là học bổng khóa học tiếng Anh giao tiếp cho người may mắn.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-2 py-1 bg-purple-50 text-purple-600 text-xs font-semibold rounded-md">#PhỏngVấn</span>
-                  <span className="px-2 py-1 bg-purple-50 text-purple-600 text-xs font-semibold rounded-md">#ThựcTập</span>
-                  <span className="px-2 py-1 bg-purple-50 text-purple-600 text-xs font-semibold rounded-md">#NghềNghiệp</span>
-                </div>
+
+                {aiLoading ? (
+                  <div className="space-y-2 animate-pulse">
+                    <div className="h-3 bg-gray-100 rounded-full w-full"></div>
+                    <div className="h-3 bg-gray-100 rounded-full w-5/6"></div>
+                    <div className="h-3 bg-gray-100 rounded-full w-4/6"></div>
+                    <div className="flex gap-2 mt-4">
+                      <div className="h-6 w-20 bg-purple-50 rounded-md"></div>
+                      <div className="h-6 w-16 bg-purple-50 rounded-md"></div>
+                      <div className="h-6 w-24 bg-purple-50 rounded-md"></div>
+                    </div>
+                  </div>
+                ) : aiError ? (
+                  <div className="text-sm text-red-500 leading-relaxed">
+                    <p>{aiError}</p>
+                    <button
+                      onClick={() => fetchAiSummary()}
+                      className="mt-2 text-purple-600 font-semibold hover:underline"
+                    >
+                      Thử lại
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-gray-600 text-sm leading-relaxed mb-4">
+  <span className="mb-2 block">🤖 <strong>AI Tóm tắt:</strong></span>
+  <div className="bg-white/50 rounded-lg p-2 border border-purple-50">
+    {renderFormattedText(aiSummary)}
+  </div>
+</div>
+                    {aiHashtags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {aiHashtags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-1 bg-purple-50 text-purple-600 text-xs font-semibold rounded-md"
+                          >
+                            #{tag.replace(/^#/, '')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
             {/* Thẻ hiển thị giá vé & Đăng ký */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
+              {workshop.registrationDeadline && (
+                <div className="mb-6">
+                  <div className="text-center text-sm font-bold mb-3 uppercase tracking-wider text-gray-500">
+                    Đóng đăng ký sau
+                  </div>
+                  <CountdownTimer
+                    targetDate={new Date(workshop.registrationDeadline).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    expiredMessage="Đã hết hạn đăng ký"
+                  />
+                </div>
+              )}
+
               <div className="mb-6">
                 <div className="text-center text-sm font-bold mb-3 uppercase tracking-wider text-gray-500">
                   Đóng đăng ký sau
@@ -149,18 +365,22 @@ const WorkshopDetail = () => {
               <div className="flex justify-between items-end py-4 border-b border-gray-100 mb-6">
                 <div>
                   <p className="text-sm text-gray-500 font-medium">Giá vé</p>
-                  <p className="text-3xl font-extrabold text-gray-900">Miễn phí</p>
+                  <p className="text-3xl font-extrabold text-gray-900">{formatPrice(workshop.price)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500 font-medium">Số lượng còn</p>
-                  <p className="text-lg font-bold text-blue-600">15/100 chỗ</p>
+                  <p className="text-sm text-gray-500 font-medium">Số lượng</p>
+                  <p className="text-lg font-bold text-blue-600">{workshop.totalSeats || 0} chỗ</p>
                 </div>
               </div>
-              
-              <button 
+
+              <button
                 onClick={handleRegisterClick}
                 disabled={isWaiting || isRegistrationExpired}
-                className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${(isWaiting || isRegistrationExpired) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30 hover:-translate-y-1'}`}
+                className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${
+                  (isWaiting || isRegistrationExpired)
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30 hover:-translate-y-1'
+                }`}
               >
                 {isRegistrationExpired ? 'Hết thời hạn đăng ký' : isWaiting ? (
                   <>
@@ -172,19 +392,16 @@ const WorkshopDetail = () => {
                   </>
                 ) : 'Đăng ký ngay'}
               </button>
-              <p className="text-center text-sm text-gray-400 mt-4">
-                Hạn chót đăng ký: 24/04/2026
-              </p>
             </div>
           </div>
         </div>
       </div>
 
-      <CheckoutModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        workshopTitle="Kỹ năng phỏng vấn xin việc cho sinh viên IT" 
-        price="Miễn phí" 
+      <CheckoutModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        workshopTitle={workshop.title}
+        price={formatPrice(workshop.price)}
       />
 
       {/* Waiting Queue Overlay */}
