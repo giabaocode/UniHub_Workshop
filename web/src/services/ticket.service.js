@@ -9,6 +9,7 @@ const getMyTickets = async () => {
         headers: {
             'Authorization': `Bearer ${user.token}`,
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
     });
 
@@ -25,6 +26,7 @@ const checkRegistration = async (workshopId) => {
         headers: {
             'Authorization': `Bearer ${user.token}`,
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
     });
 
@@ -39,6 +41,7 @@ const registerWorkshop = async (workshopId) => {
         headers: {
             'Authorization': `Bearer ${user.token}`,
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
     });
 
@@ -49,7 +52,8 @@ const registerWorkshop = async (workshopId) => {
     const data = text ? JSON.parse(text) : {}; 
 
     if (!response.ok) {
-        throw new Error(data.error || 'Có lỗi xảy ra từ phía Server');
+        console.warn("Backend Error Body:", data);
+        throw new Error(data.error || data.message || 'Có lỗi xảy ra từ phía Server');
     }
     
     return data;

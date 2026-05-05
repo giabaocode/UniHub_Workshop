@@ -90,22 +90,20 @@ const WorkshopDetail = () => {
     setIsWaiting(true);
     try {
       const result = await ticketService.registerWorkshop(id);
-
       if (result.status === 'FREE_SUCCESS') {
+        alert('Đăng ký thành công! Vé đã được gửi tới email của bạn.');
         setIsRegistered(true);
-        navigate('/my-tickets');
-      } else if (result.status === 'PAY_AT_COUNTER') {
-        setIsRegistered(true);
-        alert(result.message);
-        navigate('/my-tickets');
       } else if (result.status === 'REQUIRE_PAYMENT') {
-        // Với vé có phí, KHÔNG ĐƯỢC set isRegistered = true ở đây
-        // Vì người dùng mới chỉ bắt đầu bước thanh toán thôi
         setPaymentData(result);
         setIsModalOpen(true);
+      } else if (result.status === 'PAY_AT_COUNTER') {
+        alert(result.message || 'Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!');
+        setIsRegistered(true);
       }
     } catch (error) {
-      alert(error.message);
+      console.error("Lỗi đăng ký:", error);
+      const errorMsg = error.response?.data?.error || error.message || "Đã có lỗi xảy ra, vui lòng thử lại!";
+      alert(errorMsg);
     } finally {
       setIsWaiting(false);
     }
