@@ -187,6 +187,47 @@ const AdminWorkshopAttendees = () => {
     notCheckedIn: attendees.filter(a => !a.isCheckedIn).length
   };
 
+  // XUẤT CSV
+  const handleExportCsv = () => {
+    if (attendees.length === 0) {
+      alert('Không có dữ liệu để xuất!');
+      return;
+    }
+
+    // Định nghĩa tiêu đề các cột
+    const headers = ['STT', 'Mã Vé', 'Họ Tên', 'MSSV', 'Khoa', 'Thanh toán', 'Trạng thái Check-in'];
+
+    // Chuyển đổi từng hàng dữ liệu
+    const rows = attendees.map((a, index) => [
+      index + 1,
+      a.ticketCode || '',
+      a.name || 'Chưa cập nhật',
+      a.studentId || 'N/A',
+      a.faculty || 'N/A',
+      a.paymentStatus || 'Miễn phí',
+      a.isCheckedIn ? 'Đã Check-in' : 'Chưa Check-in'
+    ]);
+
+    // Ghép thành chuỗi CSV (BOM UTF-8 để Excel hiển thị tiếng Việt đúng)
+    const csvContent =
+      '\uFEFF' +
+      [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+    // Tạo file và trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const workshopName = (workshop?.title || `workshop-${id}`).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.href = url;
+    link.setAttribute('download', `danh_sach_${workshopName}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // LOGIC TÌM KIẾM
   const filteredAttendees = attendees.filter(a =>
     a.ticketCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -238,9 +279,12 @@ const AdminWorkshopAttendees = () => {
               <QrCode size={16} />
               Quét QR Check-in
             </button>
-            <button className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 font-bold rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200 shadow-sm text-sm">
+            <button
+              onClick={handleExportCsv}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 font-bold rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200 shadow-sm text-sm"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Xuất CSV
+              Xuất CSV ({attendees.length})
             </button>
           </div>
         </div>

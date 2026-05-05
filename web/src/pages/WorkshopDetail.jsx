@@ -82,6 +82,12 @@ const WorkshopDetail = () => {
   };
 
   const handleRegisterClick = async () => {
+    // Nếu đã đăng ký, chuyển hướng thẳng sang trang xem vé
+    if (isRegistered) {
+      navigate('/my-tickets');
+      return;
+    }
+
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user || !user.token) {
       alert("Vui lòng đăng nhập để đăng ký!");
