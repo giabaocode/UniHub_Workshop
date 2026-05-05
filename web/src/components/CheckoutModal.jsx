@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, Copy, Check, AlertCircle } from 'lucide-react';
 import ticketService from '../services/ticket.service';
@@ -110,7 +111,7 @@ const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId
                       if (!res.ok) throw new Error("Lỗi khi gọi giả lập webhook: " + res.statusText);
                       console.log("Đã giả lập gửi Webhook SePay thành công!");
                     } catch (error) {
-                      alert("Lỗi mô phỏng thanh toán: " + error.message);
+                      Swal.fire("Lỗi mô phỏng thanh toán: " + error.message);
                     }
                   }}
                   className="w-full py-3.5 bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-100 transition-all rounded-2xl border border-emerald-200 flex justify-center items-center gap-2"

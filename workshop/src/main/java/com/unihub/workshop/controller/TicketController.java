@@ -24,11 +24,13 @@ public class TicketController {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final TicketService ticketService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
-    public TicketController(TicketRepository ticketRepository, UserRepository userRepository, TicketService ticketService) {
+    public TicketController(TicketRepository ticketRepository, UserRepository userRepository, TicketService ticketService, org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.ticketService = ticketService;
+        this.eventPublisher = eventPublisher;
     }
 
     @GetMapping("/status/{ticketCode}")
@@ -135,6 +137,11 @@ public class TicketController {
         
         ticket.setScanned(true); // Đánh dấu đã tham gia
         ticketRepository.save(ticket);
+        
+        // Gửi Push Notification cho User báo đã check-in thành công
+        eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
+            this, ticket.getUser(), "Check-in thành công", "Bạn đã check-in thành công vào sự kiện: " + ticket.getWorkshop().getTitle() + ". Chúc bạn tham gia vui vẻ!"
+        ));
         
         return ResponseEntity.ok(java.util.Map.of("message", "Check-in thành công!"));
     }

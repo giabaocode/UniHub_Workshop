@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit, Lock, Unlock, MoreVertical, X, Loader2, AlertTriangle } from 'lucide-react';
 import { workshopService } from '../services/workshopService';
@@ -34,7 +35,7 @@ const AdminStaffManagement = () => {
 
   const handleCreateStaff = async () => {
     if (!formData.fullName || (!editingId && (!formData.email || !formData.password))) {
-      alert("Vui lòng điền đủ thông tin bắt buộc!");
+      Swal.fire("Vui lòng điền đủ thông tin bắt buộc!");
       return;
     }
     setIsSubmitting(true);
@@ -54,13 +55,13 @@ const AdminStaffManagement = () => {
         body: JSON.stringify(formData)
       });
       if (!response.ok) throw new Error(editingId ? "Lỗi khi cập nhật!" : "Lỗi khi tạo nhân sự!");
-      alert(editingId ? "✅ Đã cập nhật thành công!" : "✅ Đã tạo tài khoản nhân sự thành công!");
+      Swal.fire(editingId ? "✅ Đã cập nhật thành công!" : "✅ Đã tạo tài khoản nhân sự thành công!");
       setIsModalOpen(false);
       setFormData({ fullName: '', email: '', password: '' });
       setEditingId(null);
       fetchStaff();
     } catch (e) {
-      alert(e.message);
+      Swal.fire(e.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -83,7 +84,7 @@ const AdminStaffManagement = () => {
       setDeleteModal({ isOpen: false, id: null, name: '' });
       fetchStaff();
     } catch (e) {
-      alert(e.message);
+      Swal.fire(e.message);
     } finally {
       setIsDeleting(false);
     }

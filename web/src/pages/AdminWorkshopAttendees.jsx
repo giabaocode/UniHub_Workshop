@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Search, CheckCircle, XCircle, Ticket, Users, CheckSquare, Loader2, QrCode } from 'lucide-react';
@@ -67,7 +68,7 @@ const AdminWorkshopAttendees = () => {
     localStorage.setItem('offlineCheckIns', JSON.stringify(remainingIds));
 
     if (successIds.length > 0) {
-      alert(`🎉 Đã đồng bộ thành công ${successIds.length} lượt Check-in lúc mất mạng lên Server!`);
+      Swal.fire(`🎉 Đã đồng bộ thành công ${successIds.length} lượt Check-in lúc mất mạng lên Server!`);
     }
   };
 
@@ -126,9 +127,9 @@ const AdminWorkshopAttendees = () => {
         setAttendees(prev => prev.map(a =>
           a.id === attendeeId ? { ...a, isCheckedIn: true } : a
         ));
-        alert("⚠️ Đã rớt mạng! Hệ thống tự động lưu Check-in Offline.");
+        Swal.fire("⚠️ Đã rớt mạng! Hệ thống tự động lưu Check-in Offline.");
       } else {
-        alert("Lỗi Check-in: " + (error.message || "Không xác định"));
+        Swal.fire("Lỗi Check-in: " + (error.message || "Không xác định"));
       }
     } finally {
       setProcessingIds(prev => prev.filter(id => id !== attendeeId));
@@ -161,14 +162,14 @@ const AdminWorkshopAttendees = () => {
         if (matched) {
           if (!matched.isCheckedIn) {
             handleCheckIn(matched.id);
-            alert(`✅ Đã check-in thành công vé: ${scannedCode}`);
+            Swal.fire(`✅ Đã check-in thành công vé: ${scannedCode}`);
           } else {
-            alert(`⚠️ Vé ${scannedCode} này ĐÃ ĐƯỢC CHECK-IN trước đó rồi!`);
+            Swal.fire(`⚠️ Vé ${scannedCode} này ĐÃ ĐƯỢC CHECK-IN trước đó rồi!`);
           }
           scanner.clear();
           setIsScannerOpen(false);
         } else {
-          alert(`❌ Mã vé "${scannedCode}" không hợp lệ hoặc không thuộc sự kiện này!`);
+          Swal.fire(`❌ Mã vé "${scannedCode}" không hợp lệ hoặc không thuộc sự kiện này!`);
         }
       }, (error) => {
         // Bỏ qua lỗi rác khi đang quét
@@ -190,7 +191,7 @@ const AdminWorkshopAttendees = () => {
   // XUẤT CSV
   const handleExportCsv = () => {
     if (attendees.length === 0) {
-      alert('Không có dữ liệu để xuất!');
+      Swal.fire('Không có dữ liệu để xuất!');
       return;
     }
 

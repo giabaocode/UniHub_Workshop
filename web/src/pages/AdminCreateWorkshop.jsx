@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState } from 'react';
 import { Clock, Timer, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -108,7 +109,7 @@ const AdminCreateWorkshop = () => {
       navigate("/admin");
     } catch (error) {
       console.error(error);
-      alert("Lỗi: " + error.message); // Giữ lại alert cho lỗi vì cần cảnh báo
+      Swal.fire("Lỗi: " + error.message); // Giữ lại alert cho lỗi vì cần cảnh báo
     } finally {
       setIsSubmitting(false);
     }

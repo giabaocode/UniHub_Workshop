@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, User, Sparkles, CheckCircle2, Users, RefreshCw, FileText, Loader2 } from 'lucide-react';
 import CheckoutModal from '../components/CheckoutModal';
@@ -90,26 +91,26 @@ const WorkshopDetail = () => {
 
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user || !user.token) {
-      alert("Vui lòng đăng nhập để đăng ký!");
+      Swal.fire("Vui lòng đăng nhập để đăng ký!");
       return;
     }
     setIsWaiting(true);
     try {
       const result = await ticketService.registerWorkshop(id);
       if (result.status === 'FREE_SUCCESS') {
-        alert('Đăng ký thành công! Vé đã được gửi tới email của bạn.');
+        Swal.fire('Đăng ký thành công! Vé đã được gửi tới email của bạn.');
         setIsRegistered(true);
       } else if (result.status === 'REQUIRE_PAYMENT') {
         setPaymentData(result);
         setIsModalOpen(true);
       } else if (result.status === 'PAY_AT_COUNTER') {
-        alert(result.message || 'Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!');
+        Swal.fire(result.message || 'Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!');
         setIsRegistered(true);
       }
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
       const errorMsg = error.response?.data?.error || error.message || "Đã có lỗi xảy ra, vui lòng thử lại!";
-      alert(errorMsg);
+      Swal.fire(errorMsg);
     } finally {
       setIsWaiting(false);
     }

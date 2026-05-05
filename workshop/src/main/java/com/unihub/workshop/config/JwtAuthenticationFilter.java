@@ -33,7 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
+        String jwt = null;
         final String userEmail;
 
         // Bypass Preflight (OPTIONS) requests explicitly
@@ -42,13 +42,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // Hỗ trợ lấy Token từ Header hoặc từ Query Parameter (dành cho SSE)
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else if (request.getParameter("token") != null) {
+            jwt = request.getParameter("token");
+        }
+
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            jwt = authHeader.substring(7);
             userEmail = jwtService.extractUsername(jwt);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {

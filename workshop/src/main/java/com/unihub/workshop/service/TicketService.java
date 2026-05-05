@@ -98,6 +98,11 @@ public class TicketService {
             // Phát sự kiện để gửi Email (Observer Pattern)
             eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
             
+            // Gửi Push Notification cho User
+            eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
+                this, user, "Đăng ký thành công", "Bạn đã đăng ký thành công sự kiện: " + workshop.getTitle()
+            ));
+            
             response.put("status", "FREE_SUCCESS");
             response.put("ticketCode", ticketCode);
         } else {
@@ -119,6 +124,11 @@ public class TicketService {
 
                 // Phát sự kiện để gửi Email (Observer Pattern)
                 eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
+
+                // Gửi Push Notification cho User
+                eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
+                    this, user, "Đăng ký chờ thanh toán", "Bạn đã đăng ký sự kiện: " + workshop.getTitle() + ". Vui lòng thanh toán tại quầy."
+                ));
 
                 response.put("status", "PAY_AT_COUNTER");
                 response.put("message", "Cổng thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại sự kiện!");

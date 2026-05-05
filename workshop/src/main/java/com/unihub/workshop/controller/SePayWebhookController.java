@@ -92,6 +92,11 @@ public ResponseEntity<?> handleSePayWebhook(@RequestBody Map<String, Object> pay
         // Gửi email xác nhận thanh toán thành công (Observer Pattern)
         eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
         
+        // Gửi Push Notification cho User
+        eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
+            this, user, "Thanh toán thành công", "Bạn đã mua thành công vé sự kiện: " + ws.getTitle()
+        ));
+        
         System.out.println("Tạo vé thành công: " + ticketCode);
         return ResponseEntity.ok("Đã cấp vé");
     } catch (Exception e) {
