@@ -1,0 +1,209 @@
+ĐỒ ÁN MÔN H Ọ C – UniHub Workshop
+View on GitHub
+ĐỒ ÁN MÔN H Ọ C – UniHub Workshop
+Bối cảnh
+Trường Đạ i h ọ c A t ổ  ch ứ c “Tuần lễ  k ỹ  n ă ng và ngh ề  nghi ệ p” hàng nă m. S ự  ki ệ n kéo dài 5 ngày,
+mỗi ngày có 8–12 workshop di ễ n ra song song t ạ i nhi ề u phòng khác nhau. Hi ệ n t ạ i ban t ổ  ch ứ c
+quản lý đă ng ký b ằ ng Google Form và thông báo qua email th ủ  công — quy trình này không còn
+đáp ứng đư ợ c nhu c ầ u khi quy mô ngày càng l ớ n.
+Ban tổ chứ c mu ố n xây d ự ng h ệ  th ố ng UniHub Workshop để số hóa toàn b ộ  quy trình, t ừ  đă ng ký
+đến check-in t ạ i s ự  ki ệ n.
+Người dùng
+Nhóm Mô tả
+Sinh viên Xem lịch workshop, đă ng ký, nh ậ n xác nh ậ n, check-in khi tham d ự
+Ban tổ chứ c Tạo và qu ả n lý workshop, theo dõi s ố  l ư ợ ng đă ng ký
+Nhân sự check-inXác nhận sinh viên tham d ự  t ạ i c ử a phòng b ằ ng mobile app
+Yêu cầu h ệ  th ố ng
+Xem và đă ng ký workshop
+Sinh viên có th ể  xem danh sách t ấ t c ả  workshop trong tu ầ n l ễ , bao g ồ m thông tin di ễ n gi ả , phòng
+tổ chức, sơ  đ ồ  phòng và s ố  ch ỗ  còn l ạ i theo th ờ i gian th ự c. Sinh viên đă ng ký tham d ự  workshop —
+một số workshop mi ễ n phí, m ộ t s ố  có thu phí. Sau khi đă ng ký thành công, sinh viên nh ậ n mã QR
+dùng để check-in.4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 1/8
+Thông báo
+Sau khi đă ng ký thành công, sinh viên nh ậ n thông báo xác nh ậ n qua app và email. H ệ  th ố ng c ầ n
+thiết kế để  d ễ  dàng b ổ  sung kênh thông báo m ớ i (ví d ụ : Telegram) trong các h ọ c k ỳ  sau mà không
+cần thay đ ổ i l ớ n.
+Quản trị
+Ban tổ chứ c dùng trang web admin đ ể  t ạ o workshop m ớ i, c ậ p nh ậ t thông tin, đ ổ i phòng, đ ổ i gi ờ
+hoặc hủy workshop. Trang admin ch ỉ  dành cho n ộ i b ộ  và c ầ n ki ể m soát truy c ậ p ch ặ t ch ẽ  — ba
+nhóm ngư ờ i dùng có quy ề n h ạ n khác nhau: sinh viên ch ỉ  có th ể  xem và đă ng ký workshop; ban t ổ
+chức có quy ề n t ạ o, s ử a, h ủ y workshop và xem th ố ng kê; nhân s ự  check-in ch ỉ  có quy ề n truy c ậ p
+chức năng quét mã QR.
+Check-in t ạ i s ự  ki ệ n
+Nhân sự t ạ i c ử a phòng dùng mobile app đ ể  quét mã QR c ủ a sinh viên. M ộ t s ố  khu v ự c trong tr ư ờ ng
+có kết nố i m ạ ng không ổ n đ ị nh — app ph ả i cho phép ghi nh ậ n check-in t ạ m th ờ i khi không có m ạ ng
+và tự đồng b ộ  l ạ i khi k ế t n ố i đư ợ c ph ụ c h ồ i.
+AI Summary
+Ban tổ chứ c có th ể  t ả i lên file PDF gi ớ i thi ệ u v ề  workshop. H ệ  th ố ng t ự  đ ộ ng x ử  lý, tách n ộ i dung,
+làm sạch v ă n b ả n và g ử i sang mô hình AI đ ể  t ạ o b ả n tóm t ắ t hi ể n th ị  trên trang chi ti ế t workshop.
+Đồng bộ d ữ  li ệ u sinh viên
+Hệ thống qu ả n lý sinh viên hi ệ n t ạ i c ủ a tr ư ờ ng ch ư a có API. Cách duy nh ấ t đ ể  l ấ y d ữ  li ệ u là qua file
+CSV mà hệ  th ố ng c ũ  export vào ban đ êm. UniHub Workshop c ầ n đ ị nh k ỳ  nh ậ p d ữ  li ệ u này đ ể  xác
+thực sinh viên khi đă ng ký.
+Các vấn đ ề  c ầ n gi ả i quy ế t
+Tranh chấ p ch ỗ  ng ồ i: Một số workshop ch ỉ  có 60 ch ỗ  nh ư ng có th ể  có hàng tr ă m sinh viên c ố  đă ng
+ký cùng lúc ngay khi m ở  đă ng ký. H ệ  th ố ng ph ả i đ ả m b ả o không có hai sinh viên nào cùng nh ậ n
+được chỗ  cu ố i cùng.
+Tải trọng đ ộ t bi ế n: Dự kiến kho ả ng 12.000 sinh viên truy c ậ p trong 10 phút đ ầ u khi m ở  đă ng ký,
+trong đó 60% d ồ n vào 3 phút đ ầ u tiên. H ệ  th ố ng c ầ n có c ơ  ch ế  b ả o v ệ  backend API kh ỏ i b ị  quá t ả i,4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 2/8
+ngăn chặ n các client g ử i request liên t ụ c và đ ả m b ả o tính công b ằ ng gi ữ a các sinh viên đă ng ký.
+Thanh toán không ổ n đ ị nh: Nếu cổng thanh toán g ặ p s ự  c ố , sinh viên v ẫ n ph ả i xem đư ợ c l ị ch
+workshop và thông tin s ự  ki ệ n bình th ư ờ ng. Lu ồ ng đă ng ký có phí c ầ n x ử  lý tình hu ố ng thanh toán
+timeout mà không gây ra tr ừ  ti ề n hai l ầ n, đ ồ ng th ờ i các tính n ă ng không liên quan đ ế n thanh toán
+vẫn phải ho ạ t đ ộ ng bình th ư ờ ng khi c ổ ng thanh toán g ặ p s ự  c ố  kéo dài.
+Check-in offline: Nhân sự  ở  khu v ự c m ấ t m ạ ng v ẫ n ph ả i check-in đư ợ c cho sinh viên; d ữ  li ệ u không
+được mấ t khi k ế t n ố i tr ở  l ạ i.
+Tích hợp m ộ t chi ề u: Không th ể  g ọ i API h ệ  th ố ng c ũ  — ch ỉ  có th ể  đ ọ c CSV đư ợ c export theo l ị ch c ố
+định. Luồ ng nh ậ p d ữ  li ệ u ph ả i x ử  lý đư ợ c file l ỗ i, d ữ  li ệ u trùng và không làm gián đ o ạ n h ệ  th ố ng
+đang chạ y.
+Các nội dung c ầ n th ự c hi ệ n
+Phần 1 — Blueprint
+1. Tài liệu thi ế t k ế  h ệ  th ố ng
+Mô tả kiế n trúc t ổ ng th ể  c ủ a h ệ  th ố ng, bao g ồ m các thành ph ầ n chính, cách chúng giao ti ế p và lý do
+lựa chọn ki ế n trúc đ ó. Tài li ệ u c ầ n tr ả  l ờ i đư ợ c các câu h ỏ i: h ệ  th ố ng g ồ m nh ữ ng ph ầ n nào, ph ầ n
+nào nói chuy ệ n v ớ i nhau nh ư  th ế  nào, và khi m ộ t ph ầ n g ặ p s ự  c ố  thì ph ầ n còn l ạ i b ị  ả nh h ư ở ng ra
+sao.
+2. C4 Diagram
+Vẽ hai cấ p đ ộ  đ ầ u c ủ a C4 diagram:
+Level 1 – System Context: thể hiện UniHub Workshop trong b ứ c tranh toàn c ả nh — ai dùng
+hệ thống, h ệ  th ố ng ngoài nào đư ợ c tích h ợ p.
+Level 2 – Container: phân rã h ệ  th ố ng thành các container (ví d ụ : web app, mobile app,
+backend API, database, message broker), ch ỉ  rõ công ngh ệ  đ ề  xu ấ t và cách các container giao
+tiếp với nhau.
+3. High-Level Architecture Diagram4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 3/8
+Vẽ sơ đồ ki ế n trúc t ổ ng quan th ể  hi ệ n lu ồ ng d ữ  li ệ u và s ự  ph ụ  thu ộ c gi ữ a các thành ph ầ n, đ ặ c bi ệ t ở
+các điểm tích h ợ p (h ệ  th ố ng c ũ , c ổ ng thanh toán, AI model) và lu ồ ng check-in offline.
+4. Thiết kế  c ơ  s ở  d ữ  li ệ u
+Xác định các lo ạ i d ữ  li ệ u chính trong h ệ  th ố ng, đ ề  xu ấ t lo ạ i database phù h ợ p (SQL, NoSQL, ho ặ c
+kết hợp) và gi ả i thích lý do l ự a ch ọ n d ự a trên đ ặ c đ i ể m c ủ a t ừ ng lo ạ i d ữ  li ệ u. Thi ế t k ế  schema cho
+các entity quan tr ọ ng nh ấ t.
+5. Mô tả các lu ồ ng nghi ệ p v ụ  quan tr ọ ng
+Mô tả chi ti ế t ít nh ấ t hai trong s ố  các lu ồ ng sau:
+Luồng đă ng ký workshop có phí (t ừ  khi b ấ m “ Đă ng ký” đ ế n khi nh ậ n mã QR)
+Luồng check-in khi m ấ t m ạ ng và đ ồ ng b ộ  l ạ i
+Luồng nhậ p d ữ  li ệ u t ừ  CSV đ êm
+Với mỗi lu ồ ng, trình bày các b ư ớ c x ử  lý, các thành ph ầ n tham gia và cách h ệ  th ố ng ph ả n ứ ng khi có
+lỗi xảy ra gi ữ a ch ừ ng.
+6. Thiết kế  ki ể m soát truy c ậ p
+Thiết kế mô hình phân quy ề n cho h ệ  th ố ng. Xác đ ị nh các nhóm ng ư ờ i dùng, quy ề n h ạ n t ươ ng ứ ng
+với từng nhóm, và gi ả i thích cách h ệ  th ố ng ki ể m tra quy ề n t ạ i t ừ ng đ i ể m truy c ậ p (API endpoint,
+trang admin, mobile app). Nhóm có th ể  tham kh ả o mô hình RBAC (Role-Based Access Control)
+hoặc đề xu ấ t cách ti ế p c ậ n khác n ế u có lý do phù h ợ p.
+7. Thiết kế  các c ơ  ch ế  b ả o v ệ  h ệ  th ố ng
+Với mỗi vấ n đ ề  k ỹ  thu ậ t d ư ớ i đ ây, trình bày gi ả i pháp nhóm l ự a ch ọ n, gi ả i thích cách nó ho ạ t đ ộ ng
+và lý do phù h ợ p v ớ i bài toán. Các k ỹ  thu ậ t đư ợ c g ợ i ý nh ư ng nhóm có th ể  đ ề  xu ấ t gi ả i pháp thay
+thế nếu lậ p lu ậ n thuy ế t ph ụ c:
+Kiểm soát t ả i đ ộ t bi ế n: Làm thế  nào đ ể  backend API không b ị  quá t ả i khi 12.000 sinh viên
+đăng ký cùng lúc? (gợi ý: Rate Limiting — Fixed Window, Sliding Window, Token Bucket, Leaky
+Bucket)
+Xử lý cổng thanh toán không ổ n đ ị nh: Làm thế  nào đ ể  h ệ  th ố ng ph ả n ứ ng khi c ổ ng thanh
+toán liên t ụ c l ỗ i mà không kéo s ậ p toàn b ộ  d ị ch v ụ ? (gợi ý: Circuit Breaker v ớ i các tr ạ ng thái
+Closed / Open / Half-Open, k ế t h ợ p Graceful Degradation)
+Chống trừ  ti ề n hai l ầ n: Làm thế  nào đ ể  đ ả m b ả o m ộ t giao d ị ch ch ỉ  đư ợ c th ự c hi ệ n đ úng m ộ t
+lần dù client retry nhi ề u l ầ n? (gợi ý: Idempotency Key — c ơ  ch ế  sinh key, n ơ i l ư u tr ữ , cách ki ể m4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 4/8
+tra trùng l ặ p, th ờ i gian h ế t h ạ n)
+Phần 2 — Cài đ ặ t
+Phần mề m hoàn ch ỉ nh, có th ể  ch ạ y đư ợ c, cài đ ặ t toàn b ộ  h ệ  th ố ng đ ã mô t ả  trong Blueprint. Ph ầ n
+cài đặt ph ả i bao g ồ m:
+Tính năng nghi ệ p v ụ  đ ầ y đ ủ : Tất cả các ch ứ c n ă ng đư ợ c mô t ả  trong ph ầ n Yêu c ầ u h ệ  th ố ng
+— xem và đă ng ký workshop, thông báo, qu ả n tr ị , check-in, AI Summary, đ ồ ng b ộ  CSV.
+Các cơ chế  k ỹ  thu ậ t: Toàn bộ  gi ả i pháp đ ã thi ế t k ế  trong Blueprint m ụ c 6 và 7 ph ả i đư ợ c cài
+đặt thực s ự  trong code, không ch ỉ  mô ph ỏ ng ho ặ c stub.
+Hướng dẫ n kh ở i ch ạ y: README rõ ràng, đ ủ  đ ể  ng ư ờ i ch ấ m có th ể  clone repository và ch ạ y
+được hệ th ố ng mà không c ầ n h ỏ i thêm.
+Dữ liệu m ẫ u: Seed data ho ặ c script t ạ o d ữ  li ệ u ban đ ầ u đ ể  có th ể  thao tác và ki ể m tra ngay
+sau khi kh ở i ch ạ y.
+Tham khả o: Template Blueprint
+Template tham kh ả o theo c ấ u trúc c ủ a OpenSpec — framework spec-driven development, g ồ m ba
+lớp tài liệ u: proposal (vấn đề và lý do), design (giải pháp k ỹ  thu ậ t), specs (kịch bản và ràng bu ộ c
+cho từng tính n ă ng). Nhóm có th ể  b ổ  sung m ụ c ho ặ c đ i ề u ch ỉ nh c ấ u trúc n ế u phù h ợ p.
+blueprint/
+├── proposal.md          # Bối cảnh, vấn đề, mục tiêu
+├── design.md            # Kiến trúc, sơ đồ, quyết định kỹ thuật
+└── specs/
+    ├── auth.md          # Đặc tả phân quyền
+    ├── payment.md       # Đặc tả luồng thanh toán
+    ├── checkin.md       # Đặc tả luồng check-in offline
+    └── ...              # Đặc tả các tính năng khác
+proposal.md
+# UniHub Workshop — Project Proposal
+## Vấn đề
+<!-- Mô tả vấn đề hiện tại mà hệ thống cần giải quyết.
+     Tại sao Google Form không còn đủ? Hậu quả cụ thể là gì? -->4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 5/8
+## Mục tiêu
+<!-- Hệ thống cần đạt được gì? Định lượng nếu có thể.
+     Ví dụ: hỗ trợ 12.000 sinh viên đăng ký trong 10 phút đầu. -->
+## Người dùng và nhu cầu
+<!-- Ai dùng hệ thống? Họ cần làm gì? Điều gì quan trọng nhất với họ? -->
+## Phạm vi
+<!-- Những gì thuộc phạm vi đồ án này.
+     Những gì KHÔNG thuộc phạm vi (ví dụ: payment gateway thật, hạ tầng production). -->
+## Rủi ro và ràng buộc
+<!-- Các vấn đề kỹ thuật đã biết trước: tranh chấp chỗ ngồi, tải đột biến,
+     cổng thanh toán không ổn định, check-in offline, tích hợp một chiều CSV. -->
+design.md
+# UniHub Workshop — Technical Design
+## Kiến trúc tổng thể
+<!-- Mô tả architectural style được chọn và lý do.
+     Hệ thống gồm những thành phần nào? Chúng giao tiếp với nhau như thế nào? -->
+## C4 Diagram
+### Level 1 — System Context
+<!-- Sơ đồ: UniHub Workshop + actors + hệ thống ngoài -->
+### Level 2 — Container
+<!-- Sơ đồ: web app, mobile app, backend API, database, message broker, ... -->
+## High-Level Architecture Diagram
+<!-- Sơ đồ luồng dữ liệu, đặc biệt tại các điểm tích hợp và luồng check-in offline -->
+## Thiết kế cơ sở dữ liệu
+<!-- Loại database, lý do lựa chọn, schema các entity chính -->
+## Thiết kế kiểm soát truy cập
+<!-- Mô hình phân quyền, các nhóm người dùng, cách kiểm tra quyền tại từng điểm truy cập -->
+## Thiết kế các cơ chế bảo vệ hệ thống
+### Kiểm soát tải đột biến
+<!-- Giải pháp, thuật toán, ngưỡng, hành vi khi vượt ngưỡng -->4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 6/8
+ ### Xử lý cổng thanh toán không ổn định
+<!-- Giải pháp, các trạng thái, ngưỡng kích hoạt, hành vi khi lỗi -->
+### Chống trừ tiền hai lần
+<!-- Cơ chế, nơi lưu trữ, TTL, luồng xử lý khi phát hiện trùng lặp -->
+## Các quyết định kỹ thuật quan trọng (ADR)
+<!-- Với mỗi quyết định lớn: lựa chọn gì, tại sao, đánh đổi gì.
+     Ví dụ: SQL vs NoSQL, JWT vs Session, Kafka vs RabbitMQ, ... -->
+specs/[feature].md
+# Đặc tả: [Tên tính năng]
+## Mô tả
+<!-- Tính năng này làm gì? -->
+## Luồng chính
+<!-- Các bước xử lý theo thứ tự, các thành phần tham gia -->
+## Kịch bản lỗi
+<!-- Điều gì xảy ra khi: timeout, mất mạng, dữ liệu không hợp lệ, ... -->
+## Ràng buộc
+<!-- Giới hạn hiệu năng, bảo mật, tính nhất quán cần đảm bảo -->
+## Tiêu chí chấp nhận
+<!-- Làm thế nào để biết tính năng này hoạt động đúng? -->
+Quy định n ộ p bài
+Định dạng file n ộ p
+Mỗi nhóm n ộ p m ộ t file text duy nh ấ t lên h ệ  th ố ng.
+Tên file: mã-nhóm_mssv1_mssv2_mssv3_mssv4.txt (ví dụ:
+N01_21127001_21127002_21127003_21127004.txt).
+Nội dung file: Link Google Drive public ch ứ a t ấ t c ả  các thành ph ầ n bài làm.
+Cấu trúc th ư  m ụ c trên Google Drive4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 7/8
+Thư mục Drive c ủ a nhóm ph ả i bao g ồ m đ ủ  ba thành ph ầ n:
+1. Blueprint — Nhóm có th ể  n ộ p theo m ộ t trong hai hình th ứ c:
+PDF: Một file blueprint.pdf duy nhấ t ch ứ a đ ầ y đ ủ  các thành ph ầ n theo template.
+Markdown: Thư mục blueprint/ tổ chức theo c ấ u trúc template, upload tr ự c ti ế p lên
+Drive.
+2. Source code — Thư m ụ c src/ chứa toàn b ộ  mã ngu ồ n, kèm th ư  m ụ c data/ chứa seed data
+và script kh ở i t ạ o c ơ  s ở  d ữ  li ệ u, và file README.md với hướng d ẫ n cài đ ặ t và kh ở i ch ạ y.
+3. Video trình bày — Thư m ụ c clips/ chứa video quay màn hình trình bày các v ấ n đ ề  k ỹ  thu ậ t
+mà nhóm đ ã gi ả i quy ế t (không c ầ n slide). N ộ i dung ph ả i bao g ồ m camera thành viên thuy ế t
+trình và demo trự c ti ế p trên code ho ặ c ứ ng d ụ ng đ ang ch ạ y. Quy định k ỹ  thu ậ t: đ ộ  phân
+giải FullHD (1080p), bitrate kho ả ng 720 kbps, định dạ ng MP4.
+software-design-docs is maintained by nndkhoa.
+This page was generated by GitHub Pages.4/23/26, 4:36 PM ĐỒ ÁN MÔN HỌC – UniHub Workshop | software-design-docs
+https://nndkhoa.github.io/software-design-docs/exercises/project/spec.html?fbclid=IwY2xjawRWx1hleHRuA2FlbQIxMABicmlkETFVS2l4aEtEOTV2QzY… 8/8
