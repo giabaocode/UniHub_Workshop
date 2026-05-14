@@ -1,29 +1,74 @@
-import React, { useState, useContext } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CalendarDays, Users, Settings, LogOut, Search, Bell, CheckCircle } from 'lucide-react';
-// IMPORT THÊM BỘ CONTEXT VÀO ĐÂY
+import React, { useState, useEffect, useContext } from 'react';
+import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { LayoutDashboard, CalendarDays, Users, Settings, LogOut, Search, Bell, QrCode } from 'lucide-react';
 import { AuthContext } from '../context/authContext';
 
 const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-
-  // LẤY DỮ LIỆU USER VÀ HÀM LOGOUT TỪ CONTEXT
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useContext(AuthContext);
 
+  useEffect(() => {
+    // Chỉ kết nối SSE nếu là ADMIN
+    if (user?.role?.trim() !== 'ADMIN') return;
+
+    // Kết nối tới luồng SSE của Backend
+    const eventSource = new EventSource('http://localhost:8080/api/notifications/stream', { withCredentials: true });
+
+    eventSource.onopen = () => console.log("SSE Connected");
+
+    // Lắng nghe sự kiện "NEW_REGISTRATION"
+    eventSource.addEventListener('NEW_REGISTRATION', (event) => {
+      const data = JSON.parse(event.data);
+      const newNotif = {
+        id: Date.now(),
+        message: data.message,
+        read: false,
+        time: new Date().toLocaleTimeString()
+      };
+      
+      setNotifications(prev => [newNotif, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    eventSource.onerror = (err) => {
+      console.error("SSE Error:", err);
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, [user]);
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+  };
+
+  // Nếu không có user hoặc không phải ADMIN/STAFF thì đuổi về login
+  if (!user) return <Navigate to="/login" replace />;
+
+  const isAdmin = user?.role?.trim() === 'ADMIN';
+  const isStaff = user?.role?.trim() === 'STAFF';
+
+  // STAFF chỉ được vào trang attendees, không được vào trang admin khác
+  if (isStaff) {
+    return <Navigate to="/checkin" replace />;
+  }
+
+  // Menu chỉ hiện cho ADMIN
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
-    // Góp ý nhỏ: Thường Quản lý Workshop người ta sẽ trỏ về danh sách (Dashboard), còn '/admin/create' là nút Tạo mới riêng
     { name: 'Tạo Workshop mới', path: '/admin/create', icon: <CalendarDays size={20} /> },
     { name: 'Quản lý Nhân sự', path: '/admin/staff', icon: <Users size={20} /> },
     { name: 'Cài đặt', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 
-  // HÀM XỬ LÝ ĐĂNG XUẤT CHUẨN
   const handleLogout = () => {
-    logout(); // Xóa token, xóa localStorage
-    navigate('/'); // Đẩy về trang chủ hoặc trang đăng nhập
+    logout();
+    navigate('/');
   };
 
   return (
@@ -86,16 +131,43 @@ const AdminLayout = () => {
                 className="relative p-2 text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
               >
                 <Bell size={24} />
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white shadow-sm animate-pulse">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
 
               {isNotifOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animation-fade-in">
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <h3 className="font-bold text-gray-900">Thông báo</h3>
-                    <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">Đánh dấu đã đọc</button>
+                    <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-700 font-medium">Đánh dấu đã đọc</button>
                   </div>
-                  {/* ... List thông báo giữ nguyên ... */}
+                  
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-sm text-gray-500 flex flex-col items-center">
+                        <Bell size={24} className="text-gray-300 mb-2" />
+                        Chưa có thông báo nào
+                      </div>
+                    ) : (
+                      notifications.map(notif => (
+                        <div key={notif.id} className={`p-4 border-b border-gray-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                              <span className="text-lg">🎉</span>
+                            </div>
+                            <div>
+                              <p className={`text-sm ${!notif.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{notif.message}</p>
+                              <span className="text-xs text-gray-400 mt-1 block">{notif.time}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
                   <div className="p-3 text-center border-t border-gray-100 bg-gray-50/50">
                     <button className="text-sm font-medium text-blue-600 hover:text-blue-700">Xem tất cả</button>
                   </div>

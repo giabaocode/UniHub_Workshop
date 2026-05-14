@@ -35,8 +35,8 @@ const WorkshopDetail = () => {
         // Kiểm tra vé
         const user = JSON.parse(localStorage.getItem('user'));
         if (user && user.token) {
-            const check = await ticketService.checkRegistration(id);
-            setIsRegistered(check.isRegistered);
+          const check = await ticketService.checkRegistration(id);
+          setIsRegistered(check.isRegistered);
         }
 
         // Logic AI giữ nguyên...
@@ -82,32 +82,34 @@ const WorkshopDetail = () => {
   };
 
   const handleRegisterClick = async () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  if (!user || !user.token) {
-    alert("Vui lòng đăng nhập để đăng ký!");
-    return;
-  }
-setIsWaiting(true);
-  try {
-    const result = await ticketService.registerWorkshop(id);
-    
-    if (result.status === 'FREE_SUCCESS') {
-      // Chỉ với vé miễn phí mới set cái này
-      setIsRegistered(true); 
-      alert('Đăng ký thành công!');
-      navigate('/my-tickets');
-    } else if (result.status === 'REQUIRE_PAYMENT') {
-      // Với vé có phí, KHÔNG ĐƯỢC set isRegistered = true ở đây
-      // Vì người dùng mới chỉ bắt đầu bước thanh toán thôi
-      setPaymentData(result);
-      setIsModalOpen(true);
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || !user.token) {
+      alert("Vui lòng đăng nhập để đăng ký!");
+      return;
     }
-  } catch (error) {
-    alert(error.message);
-  } finally {
-    setIsWaiting(false);
-  }
-};
+    setIsWaiting(true);
+    try {
+      const result = await ticketService.registerWorkshop(id);
+
+      if (result.status === 'FREE_SUCCESS') {
+        setIsRegistered(true);
+        navigate('/my-tickets');
+      } else if (result.status === 'PAY_AT_COUNTER') {
+        setIsRegistered(true);
+        alert(result.message);
+        navigate('/my-tickets');
+      } else if (result.status === 'REQUIRE_PAYMENT') {
+        // Với vé có phí, KHÔNG ĐƯỢC set isRegistered = true ở đây
+        // Vì người dùng mới chỉ bắt đầu bước thanh toán thôi
+        setPaymentData(result);
+        setIsModalOpen(true);
+      }
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsWaiting(false);
+    }
+  };
   // Loading state
   if (isLoading) {
     return (
@@ -146,51 +148,51 @@ setIsWaiting(true);
     return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ';
   };
 
-// Dịch các định dạng danh sách, tiêu đề, xuống dòng
-const renderFormattedText = (text) => {
-  if (!text) return 'Chưa có thông tin.';
+  // Dịch các định dạng danh sách, tiêu đề, xuống dòng
+  const renderFormattedText = (text) => {
+    if (!text) return 'Chưa có thông tin.';
 
-  const lines = text.split('\n');
-  return lines.map((line, index) => {
-    // Xử lý tiêu đề (### Heading) -> Chữ to, in đậm, màu xanh
-    if (line.match(/^#{1,3}\s+/)) {
-      const content = line.replace(/^#{1,3}\s+/, '');
-      return <h4 key={index} className="text-xl font-bold text-blue-700 mt-5 mb-2">{content}</h4>;
-    }
+    const lines = text.split('\n');
+    return lines.map((line, index) => {
+      // Xử lý tiêu đề (### Heading) -> Chữ to, in đậm, màu xanh
+      if (line.match(/^#{1,3}\s+/)) {
+        const content = line.replace(/^#{1,3}\s+/, '');
+        return <h4 key={index} className="text-xl font-bold text-blue-700 mt-5 mb-2">{content}</h4>;
+      }
 
-    // Xử lý Bullet point (- item hoặc * item) -> Thêm dấu chấm xanh
-    if (line.match(/^[-*]\s+/)) {
-      const content = line.replace(/^[-*]\s+/, '');
-      return (
-        <div key={index} className="flex items-start gap-2 mb-2 ml-2">
-          <span className="text-blue-500 mt-0.5 font-bold">•</span>
-          <span className="text-gray-700">{formatBoldText(content)}</span>
-        </div>
-      );
-    }
+      // Xử lý Bullet point (- item hoặc * item) -> Thêm dấu chấm xanh
+      if (line.match(/^[-*]\s+/)) {
+        const content = line.replace(/^[-*]\s+/, '');
+        return (
+          <div key={index} className="flex items-start gap-2 mb-2 ml-2">
+            <span className="text-blue-500 mt-0.5 font-bold">•</span>
+            <span className="text-gray-700">{formatBoldText(content)}</span>
+          </div>
+        );
+      }
 
-    // Dòng trống
-    if (line.trim() === '') return <div key={index} className="h-2"></div>;
+      // Dòng trống
+      if (line.trim() === '') return <div key={index} className="h-2"></div>;
 
-    // Đoạn văn bình thường
-    return <p key={index} className="text-gray-600 leading-relaxed mb-2">{formatBoldText(line)}</p>;
-  });
-};
+      // Đoạn văn bình thường
+      return <p key={index} className="text-gray-600 leading-relaxed mb-2">{formatBoldText(line)}</p>;
+    });
+  };
 
-// Dịch ký tự **text** -> In đậm, tô màu tím nhạt/xanh
-const formatBoldText = (text) => {
-  const parts = text.split(/(\*\*.*?\*\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <strong key={i} className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return part;
-  });
-};
+  // Dịch ký tự **text** -> In đậm, tô màu tím nhạt/xanh
+  const formatBoldText = (text) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={i} className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 pt-8">
@@ -206,11 +208,10 @@ const formatBoldText = (text) => {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-4 right-4">
-                  <span className={`px-4 py-1.5 font-bold rounded-full shadow-sm border ${
-                    workshop.price > 0
+                  <span className={`px-4 py-1.5 font-bold rounded-full shadow-sm border ${workshop.price > 0
                       ? 'bg-blue-100 text-blue-700 border-blue-200'
                       : 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                  }`}>
+                    }`}>
                     {formatPrice(workshop.price)}
                   </span>
                 </div>
@@ -254,8 +255,8 @@ const formatBoldText = (text) => {
                 <div className="space-y-6">
                   <h3 className="text-2xl font-bold text-gray-900">Nội dung chương trình</h3>
                   <div className="text-lg">
-    {renderFormattedText(workshop.description)}
-  </div>
+                    {renderFormattedText(workshop.description)}
+                  </div>
                 </div>
 
                 {/* PDF download link */}
@@ -337,11 +338,11 @@ const formatBoldText = (text) => {
                 ) : (
                   <>
                     <div className="text-gray-600 text-sm leading-relaxed mb-4">
-  <span className="mb-2 block">🤖 <strong>AI Tóm tắt:</strong></span>
-  <div className="bg-white/50 rounded-lg p-2 border border-purple-50">
-    {renderFormattedText(aiSummary)}
-  </div>
-</div>
+                      <span className="mb-2 block">🤖 <strong>AI Tóm tắt:</strong></span>
+                      <div className="bg-white/50 rounded-lg p-2 border border-purple-50">
+                        {renderFormattedText(aiSummary)}
+                      </div>
+                    </div>
                     {aiHashtags.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {aiHashtags.map((tag, idx) => (
@@ -362,17 +363,17 @@ const formatBoldText = (text) => {
             {/* Thẻ hiển thị giá vé & Đăng ký */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
               {workshop.registrationDeadline && (
-  <div className="mb-6">
-    <CountdownTimer
-      targetDate={workshop.registrationDeadline}
-      title="Đóng đăng ký sau"
-      expiredMessage="Đã hết hạn đăng ký"
-    />
-  </div>
-)}
+                <div className="mb-6">
+                  <CountdownTimer
+                    targetDate={workshop.registrationDeadline}
+                    title="Đóng đăng ký sau"
+                    expiredMessage="Đã hết hạn đăng ký"
+                  />
+                </div>
+              )}
 
 
-              
+
               <h3 className="text-xl font-bold text-gray-900 mb-2 border-t border-gray-100 pt-6">Thông tin đăng ký</h3>
               <div className="flex justify-between items-end py-4 border-b border-gray-100 mb-6">
                 <div>
@@ -380,33 +381,40 @@ const formatBoldText = (text) => {
                   <p className="text-3xl font-extrabold text-gray-900">{formatPrice(workshop.price)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500 font-medium">Số lượng</p>
-                  <p className="text-lg font-bold text-blue-600">{workshop.totalSeats || 0} chỗ</p>
+                  <p className="text-sm text-gray-500 font-medium">Còn lại</p>
+                  <p className={`text-lg font-bold ${
+                    (workshop.totalSeats - (workshop.bookedSpots || 0)) <= 0 ? 'text-red-500' :
+                    (workshop.totalSeats - (workshop.bookedSpots || 0)) <= 10 ? 'text-amber-500' :
+                    'text-blue-600'
+                  }`}>
+                    {Math.max(0, (workshop.totalSeats || 0) - (workshop.bookedSpots || 0))} / {workshop.totalSeats || 0} chỗ
+                  </p>
                 </div>
               </div>
 
               <button
                 onClick={handleRegisterClick}
-                disabled={isWaiting || (isRegistrationExpired && !isRegistered)}
+                disabled={isWaiting || isRegistrationExpired || (workshop.bookedSpots >= workshop.totalSeats && !isRegistered)}
                 className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${
-                  isWaiting || (isRegistrationExpired && !isRegistered)
+                  isWaiting
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : isRegistered 
-                      ? 'bg-green-600 hover:bg-green-700' 
-                      : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-1'
+                    : isRegistered
+                      ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
+                      : isRegistrationExpired
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : (workshop.bookedSpots >= workshop.totalSeats)
+                          ? 'bg-red-400 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-1'
                 }`}
               >
                 {isWaiting ? (
-                  <>
-                    <Loader2 size={24} className="animate-spin" />
-                    Đang xử lý...
-                  </>
+                  <><Loader2 size={24} className="animate-spin" /> Đang xử lý...</>
                 ) : isRegistered ? (
-                  <>
-                    <CheckCircle2 size={24} /> Đã đăng ký (Xem vé)
-                  </>
+                  <><CheckCircle2 size={24} /> Đã đăng ký — Xem vé</>
                 ) : isRegistrationExpired ? (
                   'Hết thời hạn đăng ký'
+                ) : (workshop.bookedSpots >= workshop.totalSeats) ? (
+                  'Đã hết chỗ'
                 ) : (
                   'Đăng ký ngay'
                 )}
@@ -417,13 +425,13 @@ const formatBoldText = (text) => {
       </div>
 
       {/* Sửa lại đoạn này */}
-<CheckoutModal
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  workshopTitle={workshop.title}
-  paymentData={paymentData} 
-  workshopId={id}
-/>
+      <CheckoutModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        workshopTitle={workshop.title}
+        paymentData={paymentData}
+        workshopId={id}
+      />
 
       {/* Waiting Queue Overlay */}
       {isWaiting && (
@@ -443,7 +451,8 @@ const formatBoldText = (text) => {
             <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden relative">
               <div className="bg-blue-600 h-1.5 rounded-full absolute top-0 left-0 animate-[progress_2.5s_ease-in-out_forwards]"></div>
             </div>
-            <style dangerouslySetInnerHTML={{__html: `
+            <style dangerouslySetInnerHTML={{
+              __html: `
               @keyframes progress {
                 0% { width: 0%; }
                 50% { width: 70%; }

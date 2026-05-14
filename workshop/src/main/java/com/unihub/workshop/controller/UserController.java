@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping("/profile")
@@ -61,5 +63,62 @@ public class UserController {
                 user.getStudentId(),
                 user.getFaculty()
         ));
+    }
+
+    @GetMapping("/staff")
+    public ResponseEntity<?> getStaffList() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            return ResponseEntity.status(403).body("Chỉ Admin mới có quyền xem danh sách nhân sự!");
+        }
+
+        java.util.List<User> staffList = userRepository.findAll().stream()
+                .filter(u -> "STAFF".equals(u.getRole()))
+                .collect(java.util.stream.Collectors.toList());
+
+        java.util.List<java.util.Map<String, Object>> result = staffList.stream().map(s -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", s.getId());
+            map.put("name", s.getFullName());
+            map.put("email", s.getEmail());
+            map.put("status", "Hoạt động");
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/staff/{id}")
+    public ResponseEntity<?> updateStaff(@PathVariable Long id, @RequestBody com.unihub.workshop.controller.dto.RegisterRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            return ResponseEntity.status(403).body("Chỉ Admin mới có quyền cập nhật nhân sự!");
+        }
+
+        User staff = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy nhân sự"));
+        if (!"STAFF".equals(staff.getRole())) throw new RuntimeException("User không phải là nhân sự");
+
+        staff.setFullName(request.getFullName());
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            staff.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+        userRepository.save(staff);
+        return ResponseEntity.ok(java.util.Map.of("message", "Cập nhật thành công"));
+    }
+
+    @DeleteMapping("/staff/{id}")
+    public ResponseEntity<?> deleteStaff(@PathVariable Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            return ResponseEntity.status(403).body("Chỉ Admin mới có quyền xóa nhân sự!");
+        }
+
+        User staff = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy nhân sự"));
+        if (!"STAFF".equals(staff.getRole())) throw new RuntimeException("User không phải là nhân sự");
+
+        userRepository.delete(staff);
+        return ResponseEntity.ok(java.util.Map.of("message", "Xóa thành công"));
     }
 }

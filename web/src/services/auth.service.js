@@ -5,6 +5,7 @@ const login = async (email, password) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true' // Vượt tường Ngrok
         },
         body: JSON.stringify({ email, password }),
     });
@@ -25,6 +26,7 @@ const register = async (fullName, email, password, studentId, faculty) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({ fullName, email, password, studentId, faculty }),
     });
@@ -49,6 +51,7 @@ const googleLogin = async (credential) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({ token: credential }),
     });
@@ -69,6 +72,7 @@ const githubLogin = async (code) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({ code }),
     });

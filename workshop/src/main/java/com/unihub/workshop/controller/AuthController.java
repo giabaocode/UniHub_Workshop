@@ -28,6 +28,18 @@ public class AuthController {
         return ResponseEntity.ok(authService.register(request));
     }
 
+    @PostMapping("/create-staff")
+    public ResponseEntity<?> createStaff(@RequestBody RegisterRequest request) {
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        
+        if (!isAdmin) {
+            return ResponseEntity.status(403).body("Chỉ Admin mới có quyền tạo nhân sự!");
+        }
+        return ResponseEntity.ok(authService.createStaff(request));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> authenticate(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.authenticate(request));

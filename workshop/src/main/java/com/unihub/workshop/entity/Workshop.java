@@ -166,5 +166,8 @@ public class Workshop {
     public void setBookedSpots(Integer bookedSpots) {
         this.bookedSpots = bookedSpots;
     }
-    
+
+    public Long getVersion() {
+        return version;
+    }
 }

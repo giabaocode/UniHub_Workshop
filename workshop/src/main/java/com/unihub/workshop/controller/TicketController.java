@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tickets")
-@CrossOrigin(origins = "http://localhost:5173")
 public class TicketController {
 
     private final TicketRepository ticketRepository;
@@ -107,6 +106,12 @@ public class TicketController {
     // 1. Lấy danh sách người tham dự của một Workshop
     @GetMapping("/workshop/{workshopId}")
     public ResponseEntity<?> getAttendeesByWorkshop(@PathVariable Long workshopId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasPermission = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
+        if (!hasPermission) {
+            return ResponseEntity.status(403).body("Bạn không có quyền truy cập danh sách này!");
+        }
         List<Ticket> tickets = ticketRepository.findByWorkshopId(workshopId);
         
         // Map dữ liệu Ticket ra định dạng JSON giống y hệt React đang cần
@@ -128,6 +133,12 @@ public class TicketController {
     // 2. Check-in thủ công
     @PutMapping("/{ticketId}/checkin")
     public ResponseEntity<?> checkInTicket(@PathVariable Long ticketId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasPermission = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
+        if (!hasPermission) {
+            return ResponseEntity.status(403).body("Bạn không có quyền check-in sinh viên!");
+        }
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vé này!"));
         

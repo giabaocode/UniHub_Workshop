@@ -39,9 +39,11 @@ const AuthPage = () => {
         // 2. Phân luồng điều hướng dựa vào Role
         // (Dùng .trim() cho chắc cú cái vụ lỗi '\n' lúc nãy nha 😂)
         if (loggedInUser && loggedInUser.role?.trim() === 'ADMIN') {
-          navigate('/admin'); // Admin thì cho vào Dashboard
+          navigate('/admin');
+        } else if (loggedInUser && loggedInUser.role?.trim() === 'STAFF') {
+          navigate('/checkin');
         } else {
-          navigate('/');      // Sinh viên thì ra trang chủ
+          navigate('/');
         }
       } else {
         if (password !== confirmPassword) {
@@ -345,7 +347,6 @@ const AuthPage = () => {
                   onError={() => {
                     setError('Đăng nhập Google thất bại');
                   }}
-                  useOneTap
                 />
               </div>
 
