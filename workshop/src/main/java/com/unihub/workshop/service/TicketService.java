@@ -76,14 +76,10 @@ public class TicketService {
         Map<String, Object> response = new HashMap<>();
 
         if (workshop.getPrice() == null || workshop.getPrice() == 0) {
-            try {
-                // Tăng số lượng vé và kích hoạt Version (Optimistic Locking)
-                workshop.setBookedSpots(workshop.getBookedSpots() + 1);
-                workshopRepository.saveAndFlush(workshop);
-            } catch (ObjectOptimisticLockingFailureException e) {
-                throw new RuntimeException("Vé cuối cùng đã có người nhanh tay hơn!");
-            }
-
+           int updatedRows = workshopRepository.incrementSeatIfAvailable(workshop.getId());
+           if(updatedRows == 0){
+                throw new RuntimeException("Rất tiếc! Sự kiến đã hết vé hoặc vé cuối cùng vừa được đăng ký");
+           }
             // Vé MIỄN PHÍ: Tạo và lưu luôn. 
             // Lưu ý: Sử dụng constructor 4 tham số từ Ticket
             Ticket ticket = new Ticket(ticketCode, user, workshop, false);

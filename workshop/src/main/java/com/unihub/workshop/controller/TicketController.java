@@ -6,6 +6,9 @@ import com.unihub.workshop.entity.Workshop;
 import com.unihub.workshop.repository.TicketRepository;
 import com.unihub.workshop.repository.UserRepository;
 import com.unihub.workshop.service.TicketService;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -74,9 +77,15 @@ public class TicketController {
     }
 
     @GetMapping("/check-registration/{workshopId}")
-    public ResponseEntity<Map<String, Boolean>> checkRegistration(@PathVariable Long workshopId) {
-        boolean isRegistered = ticketService.isUserRegistered(workshopId);
-        return ResponseEntity.ok(Map.of("isRegistered", isRegistered));
+    public ResponseEntity<?> checkRegistration(@PathVariable Long workshopId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userRepository.findByEmail(authentication.getName())
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        boolean isRegistered = ticketRepository.existsByUserIdAndWorkshopId(currentUser.getId(), workshopId);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("isRegistered", isRegistered);
+        return ResponseEntity.ok(response);
+        
     }
 
     @PostMapping("/register/{workshopId}")
@@ -127,7 +136,26 @@ public class TicketController {
         
         return ResponseEntity.ok(java.util.Map.of("message", "Check-in thành công!"));
     }
+    // ==========================================
+    // ENHANCEMENT 4: BULK OFFLINE CHECK-IN SYNC
+    // ==========================================
+    @PutMapping("/batch-checkin")
+    @Transactional
+    public ResponseEntity<?> batchCheckInTickets(@RequestBody List<String> ticketCodes) {
+        if (ticketCodes == null || ticketCodes.isEmpty()) {
+            return ResponseEntity.badRequest().body("Danh sách vé trống, không có gì để đồng bộ.");
+        }
 
+        // Thực thi Update hàng loạt xuống thẳng Database
+        int updatedCount = ticketRepository.checkInBatch(ticketCodes);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Đồng bộ offline thành công");
+        response.put("received", ticketCodes.size());
+        response.put("newlyCheckedIn", updatedCount);
+
+        return ResponseEntity.ok(response);
+    }
 
 
 }

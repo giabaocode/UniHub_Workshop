@@ -55,10 +55,36 @@ const registerWorkshop = async (workshopId) => {
     return data;
 };
 
+const batchCheckIn = async (ticketCodes) => {
+    // 1. Lấy token của nhân sự/admin đang đăng nhập
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || !user.token) throw new Error('Chưa đăng nhập');
+
+    // 2. Gửi request PUT với mảng các ticketCodes
+    const response = await fetch(`${API_URL}/batch-checkin`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json',
+        },
+        // ticketCodes là một mảng: ["TK00010002", "TK00050002"]
+        body: JSON.stringify(ticketCodes), 
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Lỗi khi đồng bộ check-in offline');
+    }
+
+    return await response.json();
+};
+
+// ĐƯA OBJECT GOM NHÓM VÀ EXPORT XUỐNG DƯỚI CÙNG
 const ticketService = {
     getMyTickets,
     checkRegistration,
-    registerWorkshop
+    registerWorkshop,
+    batchCheckIn
 };
 
 export default ticketService;

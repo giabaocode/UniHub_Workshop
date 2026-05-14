@@ -13,7 +13,7 @@ const AuthPage = () => {
   const [isOtp, setIsOtp] = useState(false);
 
   const { login, register, googleLogin } = useContext(AuthContext);
-  
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -146,11 +146,10 @@ const AuthPage = () => {
             }
           }} className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
             {forgotMessage.text && (
-              <div className={`p-3 rounded-lg text-sm text-center font-medium border ${
-                forgotMessage.type === 'success'
+              <div className={`p-3 rounded-lg text-sm text-center font-medium border ${forgotMessage.type === 'success'
                   ? 'bg-green-50 text-green-700 border-green-100'
                   : 'bg-red-50 text-red-600 border-red-100'
-              }`}>
+                }`}>
                 {forgotMessage.text}
               </div>
             )}
@@ -160,7 +159,7 @@ const AuthPage = () => {
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Mail className="text-gray-400" size={18} />
                 </div>
-                <input 
+                <input
                   type="email"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
@@ -170,8 +169,8 @@ const AuthPage = () => {
                 />
               </div>
             </div>
-            
-            <button 
+
+            <button
               type="submit"
               disabled={isForgotLoading || forgotMessage.type === 'success'}
               className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
@@ -347,12 +346,11 @@ const AuthPage = () => {
                     setError('Đăng nhập Google thất bại');
                   }}
                   useOneTap
-                  width="100%"
                 />
               </div>
 
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => {
                   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID || 'YOUR_GITHUB_CLIENT_ID';
                   window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=user:email`;
