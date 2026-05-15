@@ -1,6 +1,5 @@
 node_modules/
 workshop/target/
-workshop/.mvn/
 .idea/
 .vscode/
 .env

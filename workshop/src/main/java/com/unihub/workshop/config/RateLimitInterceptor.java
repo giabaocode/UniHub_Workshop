@@ -2,6 +2,7 @@ package com.unihub.workshop.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -44,27 +45,31 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         long currentTime = System.currentTimeMillis();
         long windowStart = currentTime - (TIME_WINDOW_SECONDS * 1000L);
 
-        // 1. Xoá các request cũ hơn cửa sổ 10 giây
-        redisTemplate.opsForZSet().removeRangeByScore(key, 0, windowStart);
+        try {
+            // 1. Xoá các request cũ hơn cửa sổ 10 giây
+            redisTemplate.opsForZSet().removeRangeByScore(key, 0, windowStart);
 
-        // 2. Đếm số lượng request còn lại trong 10 giây qua
-        Long currentCount = redisTemplate.opsForZSet().zCard(key);
+            // 2. Đếm số lượng request còn lại trong 10 giây qua
+            Long currentCount = redisTemplate.opsForZSet().zCard(key);
 
-        // 3. Nếu số lượng >= MAX_REQUESTS -> Chặn
-        if (currentCount != null && currentCount >= MAX_REQUESTS) {
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value()); // 429
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\": \"Bạn đang gửi yêu cầu quá nhanh. Vui lòng thử lại sau 10 giây!\"}");
-            return false; // Chặn request không cho đi tiếp vào Controller
+            // 3. Nếu số lượng >= MAX_REQUESTS -> Chặn
+            if (currentCount != null && currentCount >= MAX_REQUESTS) {
+                response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value()); // 429
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"error\": \"Bạn đang gửi yêu cầu quá nhanh. Vui lòng thử lại sau 10 giây!\"}");
+                return false; // Chặn request không cho đi tiếp vào Controller
+            }
+
+            // 4. Nếu chưa vượt quá, thêm request hiện tại vào ZSET
+            // Dùng UUID để tránh trùng lặp value nếu 2 request đến cùng một mili-giây
+            String value = currentTime + "-" + java.util.UUID.randomUUID().toString();
+            redisTemplate.opsForZSet().add(key, value, currentTime);
+
+            // Cập nhật lại thời gian sống của key để dọn dẹp bộ nhớ Redis
+            redisTemplate.expire(key, Duration.ofSeconds(TIME_WINDOW_SECONDS));
+        } catch (DataAccessException error) {
+            System.err.println("Redis rate limiter unavailable; allowing request. Cause: " + error.getMessage());
         }
-
-        // 4. Nếu chưa vượt quá, thêm request hiện tại vào ZSET
-        // Dùng UUID để tránh trùng lặp value nếu 2 request đến cùng một mili-giây
-        String value = currentTime + "-" + java.util.UUID.randomUUID().toString();
-        redisTemplate.opsForZSet().add(key, value, currentTime);
-        
-        // Cập nhật lại thời gian sống của key để dọn dẹp bộ nhớ Redis
-        redisTemplate.expire(key, Duration.ofSeconds(TIME_WINDOW_SECONDS));
 
         return true;
     }

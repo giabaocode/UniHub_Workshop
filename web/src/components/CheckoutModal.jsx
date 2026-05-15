@@ -2,27 +2,22 @@ import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, Copy, Check, AlertCircle } from 'lucide-react';
 import ticketService from '../services/ticket.service';
+import { API_BASE_URL } from '../config/api';
 
 const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId }) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Cơ chế tự động kiểm tra trạng thái vé (Polling)
-  // Cơ chế tự động kiểm tra trạng thái vé (Polling)
   useEffect(() => {
-    // Nếu modal không mở hoặc không có workshopId thì không làm gì
-    if (!isOpen || isSuccess) return;
+    if (!isOpen || isSuccess || !paymentData?.memo) return;
 
     const interval = setInterval(async () => {
       try {
-        // Hỏi Backend xem có vé chưa
-        const res = await ticketService.checkRegistration(workshopId);
+        const res = await ticketService.getTicketStatus(paymentData.memo);
         
-        // In ra để bạn nhìn thấy tận mắt cú lừa của JS
-        console.log("Kết quả từ Backend:", res);
+        console.log("Trạng thái thanh toán:", res.status);
 
-        // ĐÂY LÀ ĐIỂM CHỐT HẠ: Phải kiểm tra chính xác biến isRegistered bên trong res
-        if (res.isRegistered === true) {
+        if (res.status === 'PAID') {
           setIsSuccess(true);
           clearInterval(interval);
           
@@ -38,7 +33,7 @@ const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isOpen, workshopId, isSuccess, onClose]);
+  }, [isOpen, paymentData?.memo, isSuccess, onClose]);
 
   if (!isOpen || !paymentData) return null;
 
@@ -103,7 +98,7 @@ const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId
                   onClick={async () => {
                     try {
                       // Gọi API giả lập webhook
-                      const res = await fetch("http://localhost:8080/api/webhooks/sepay", {
+                      const res = await fetch(`${API_BASE_URL}/webhooks/sepay`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ content: paymentData.memo })

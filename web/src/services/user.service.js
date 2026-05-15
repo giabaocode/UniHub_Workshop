@@ -1,6 +1,8 @@
-const API_URL = `${import.meta.env.VITE_API_BASE_URL}/users`;
-const AUTH_API_URL = `${import.meta.env.VITE_API_BASE_URL}/auth`;
-const UPLOAD_API_URL = `${import.meta.env.VITE_API_BASE_URL}/upload`;
+import { API_BASE_URL } from '../config/api';
+import cloudinaryService from './cloudinary.service';
+
+const API_URL = `${API_BASE_URL}/users`;
+const AUTH_API_URL = `${API_BASE_URL}/auth`;
 
 // Tích hợp sẵn thẻ Ngrok vào Header chung
 const getAuthHeader = () => {
@@ -102,25 +104,8 @@ const resetPassword = async (token, newPassword) => {
 };
 
 const uploadAvatar = async (file) => {
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', uploadPreset);
-
-    // Không cần ngrok header ở đây vì gọi thẳng lên server của Cloudinary
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: formData,
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.error?.message || 'Lỗi khi tải ảnh lên Cloudinary');
-    }
-
-    return { url: data.secure_url };
+    const url = await cloudinaryService.uploadImage(file);
+    return { url };
 };
 
 const userService = {

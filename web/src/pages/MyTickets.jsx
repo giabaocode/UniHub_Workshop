@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { QRCodeSVG } from 'qrcode.react';
-import { Calendar, Clock, MapPin, User, Ticket as TicketIcon } from 'lucide-react';
+import { AlertCircle, Calendar, Clock, Loader2, MapPin, User, Ticket as TicketIcon } from 'lucide-react';
 import ticketService from '../services/ticket.service';
 import { Link } from 'react-router-dom';
+import CheckoutModal from '../components/CheckoutModal';
 
 const MyTickets = () => {
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [processingTicketId, setProcessingTicketId] = useState(null);
+  const [checkoutState, setCheckoutState] = useState({
+    isOpen: false,
+    paymentData: null,
+    workshopId: null,
+    workshopTitle: '',
+  });
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -23,6 +32,35 @@ const MyTickets = () => {
 
     fetchTickets();
   }, []);
+
+  const handleContinuePayment = async (ticket) => {
+    if (processingTicketId) return;
+
+    setProcessingTicketId(ticket.id);
+    try {
+      const result = await ticketService.registerWorkshop(ticket.workshopId);
+
+      if (result.status === 'REQUIRE_PAYMENT') {
+        setCheckoutState({
+          isOpen: true,
+          paymentData: result,
+          workshopId: ticket.workshopId,
+          workshopTitle: ticket.title,
+        });
+      } else if (result.status === 'PAYMENT_GATEWAY_DOWN') {
+        Swal.fire(result.message || 'Cổng thanh toán đang tạm thời gián đoạn. Vui lòng thử lại sau.');
+      } else if (result.status === 'PAY_AT_COUNTER') {
+        Swal.fire(result.message || 'Cổng thanh toán bảo trì. Vui lòng thanh toán tại quầy.');
+      } else {
+        Swal.fire('Trạng thái vé đã thay đổi. Trang sẽ được tải lại.');
+        window.location.reload();
+      }
+    } catch (err) {
+      Swal.fire(err.message || 'Không thể tiếp tục thanh toán. Vui lòng thử lại sau.');
+    } finally {
+      setProcessingTicketId(null);
+    }
+  };
 
 
   return (
@@ -48,68 +86,113 @@ const MyTickets = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {tickets.map(ticket => (
-            <div key={ticket.id} className="relative bg-white rounded-2xl shadow-sm flex flex-col md:flex-row overflow-hidden border border-gray-200">
-              {/* Ticket cut corner effect - Left */}
-              <div className="absolute top-1/2 -left-3 w-6 h-6 bg-gray-100 rounded-full transform -translate-y-1/2 hidden md:block border-r border-gray-200"></div>
-              {/* Ticket cut corner effect - Right */}
-              <div className="absolute top-1/2 -right-3 w-6 h-6 bg-gray-100 rounded-full transform -translate-y-1/2 hidden md:block border-l border-gray-200"></div>
-              
-              <div className="absolute top-1/2 left-0 right-0 border-t-2 border-dashed border-gray-200 md:hidden"></div>
+            {tickets.map(ticket => {
+              const canCheckIn = ticket.canCheckIn && ticket.qrValue;
+              const isPendingPayment = ticket.paymentStatus === 'PENDING';
 
-              {/* Thông tin vé */}
-              <div className="p-6 md:p-8 flex-grow flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
-                      {ticket.status}
-                    </span>
-                    <span className="text-sm font-mono text-gray-400">#{ticket.id}</span>
+              return (
+                <div key={ticket.id} className="relative bg-white rounded-2xl shadow-sm flex flex-col md:flex-row overflow-hidden border border-gray-200">
+                  {/* Ticket cut corner effect - Left */}
+                  <div className="absolute top-1/2 -left-3 w-6 h-6 bg-gray-100 rounded-full transform -translate-y-1/2 hidden md:block border-r border-gray-200"></div>
+                  {/* Ticket cut corner effect - Right */}
+                  <div className="absolute top-1/2 -right-3 w-6 h-6 bg-gray-100 rounded-full transform -translate-y-1/2 hidden md:block border-l border-gray-200"></div>
+
+                  <div className="absolute top-1/2 left-0 right-0 border-t-2 border-dashed border-gray-200 md:hidden"></div>
+
+                  {/* Thông tin vé */}
+                  <div className="p-6 md:p-8 flex-grow flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
+                          {ticket.status}
+                        </span>
+                        <span className="text-sm font-mono text-gray-400">#{ticket.id}</span>
+                      </div>
+                      <h2 className="text-xl md:text-2xl font-bold text-gray-900 mt-4 line-clamp-2 pr-4">
+                        <Link
+                          to={`/workshop/${ticket.workshopId}`}
+                          className="hover:text-blue-600 hover:underline transition-all cursor-pointer"
+                        >
+                          {ticket.title}
+                        </Link>
+                      </h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <User size={16} className="text-gray-400" />
+                          <span>{ticket.speaker}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin size={16} className="text-gray-400" />
+                          <span>{ticket.room}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar size={16} className="text-gray-400" />
+                          <span>{ticket.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock size={16} className="text-gray-400" />
+                          <span>{ticket.time}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mt-4 line-clamp-2 pr-4">
-  <Link 
-    to={`/workshop/${ticket.workshopId}`} 
-    className="hover:text-blue-600 hover:underline transition-all cursor-pointer"
-  >
-    {ticket.title}
-  </Link>
-</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <User size={16} className="text-gray-400" />
-                      <span>{ticket.speaker}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin size={16} className="text-gray-400" />
-                      <span>{ticket.room}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-gray-400" />
-                      <span>{ticket.date}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-gray-400" />
-                      <span>{ticket.time}</span>
-                    </div>
+
+                  {/* Đường đứt nét phân cách */}
+                  <div className="hidden md:block w-0 border-l-2 border-dashed border-gray-200 my-4"></div>
+
+                  {/* QR Code Section */}
+                  <div className="p-6 md:p-8 bg-gray-50 flex flex-col items-center justify-center md:w-64 flex-shrink-0">
+                    {canCheckIn ? (
+                      <>
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 mb-3">
+                          <QRCodeSVG value={ticket.qrValue} size={120} level={"H"} />
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium text-center uppercase tracking-widest">Quét để check-in</p>
+                      </>
+                    ) : (
+                      <div className="text-center max-w-[180px]">
+                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center">
+                          <AlertCircle size={24} />
+                        </div>
+                        <p className="text-sm font-bold text-gray-800">
+                          {isPendingPayment ? 'Chờ thanh toán' : 'Chưa có QR'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          Thanh toán để nhận mã QR check-in. Nếu cổng đang lỗi, bạn có thể thử lại sau.
+                        </p>
+                        {isPendingPayment && (
+                          <button
+                            type="button"
+                            onClick={() => handleContinuePayment(ticket)}
+                            disabled={processingTicketId === ticket.id}
+                            className="inline-flex items-center justify-center gap-1.5 mt-3 px-3 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {processingTicketId === ticket.id ? (
+                              <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Đang thử lại
+                              </>
+                            ) : (
+                              'Tiếp tục thanh toán'
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* Đường đứt nét phân cách */}
-              <div className="hidden md:block w-0 border-l-2 border-dashed border-gray-200 my-4"></div>
-
-              {/* QR Code Section */}
-              <div className="p-6 md:p-8 bg-gray-50 flex flex-col items-center justify-center md:w-64 flex-shrink-0">
-                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 mb-3">
-                  <QRCodeSVG value={ticket.qrValue} size={120} level={"H"} />
-                </div>
-                <p className="text-xs text-gray-500 font-medium text-center uppercase tracking-widest">Quét để check-in</p>
-              </div>
-            </div>
-          ))}
+              );
+            })}
           </div>
         )}
       </div>
+      <CheckoutModal
+        isOpen={checkoutState.isOpen}
+        onClose={() => setCheckoutState(prev => ({ ...prev, isOpen: false }))}
+        workshopTitle={checkoutState.workshopTitle}
+        paymentData={checkoutState.paymentData}
+        workshopId={checkoutState.workshopId}
+      />
     </div>
   );
 };

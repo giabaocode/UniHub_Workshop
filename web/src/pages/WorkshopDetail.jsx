@@ -16,6 +16,7 @@ const WorkshopDetail = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [registrationStatus, setRegistrationStatus] = useState(null);
   const navigate = useNavigate();
 
   // AI Summary state
@@ -37,7 +38,8 @@ const WorkshopDetail = () => {
         const user = JSON.parse(localStorage.getItem('user'));
         if (user && user.token) {
           const check = await ticketService.checkRegistration(id);
-          setIsRegistered(check.isRegistered);
+          setIsRegistered(Boolean(check.isRegistered));
+          setRegistrationStatus(check.paymentStatus || null);
         }
 
         // Logic AI giữ nguyên...
@@ -83,8 +85,7 @@ const WorkshopDetail = () => {
   };
 
   const handleRegisterClick = async () => {
-    // Nếu đã đăng ký, chuyển hướng thẳng sang trang xem vé
-    if (isRegistered) {
+    if (isRegistered && registrationStatus !== 'PENDING') {
       navigate('/my-tickets');
       return;
     }
@@ -92,25 +93,52 @@ const WorkshopDetail = () => {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user || !user.token) {
       Swal.fire("Vui lòng đăng nhập để đăng ký!");
+      navigate('/login');
       return;
     }
     setIsWaiting(true);
     try {
       const result = await ticketService.registerWorkshop(id);
+      const confirmed = await ticketService.checkRegistration(id);
+
+      if (!confirmed.isRegistered || (result.ticketCode && confirmed.ticketCode !== result.ticketCode)) {
+        setIsRegistered(false);
+        setRegistrationStatus(null);
+        setPaymentData(null);
+        Swal.fire('Đăng ký chưa được ghi nhận do sự kiện vừa hết chỗ. Vui lòng tải lại trang.');
+        return;
+      }
+
       if (result.status === 'FREE_SUCCESS') {
         Swal.fire('Đăng ký thành công! Vé đã được gửi tới email của bạn.');
         setIsRegistered(true);
+        setRegistrationStatus(confirmed.paymentStatus || 'PAID');
+        navigate('/my-tickets');
+      } else if (result.status === 'PAY_AT_COUNTER') {
+        setIsRegistered(true);
+        setRegistrationStatus(confirmed.paymentStatus || 'PAY_AT_COUNTER');
+        Swal.fire(result.message || 'Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!');
+        navigate('/my-tickets');
+      } else if (result.status === 'PAYMENT_GATEWAY_DOWN') {
+        setIsRegistered(true);
+        setRegistrationStatus(confirmed.paymentStatus || 'PENDING');
+        setPaymentData(null);
+        setIsModalOpen(false);
+        Swal.fire(result.message || 'Cổng thanh toán đang tạm thời gián đoạn. Bạn đã được giữ chỗ, vui lòng vào Vé của tôi để thanh toán lại sau.');
+        navigate('/my-tickets');
       } else if (result.status === 'REQUIRE_PAYMENT') {
+        setIsRegistered(true);
+        setRegistrationStatus(confirmed.paymentStatus || 'PENDING');
         setPaymentData(result);
         setIsModalOpen(true);
-      } else if (result.status === 'PAY_AT_COUNTER') {
-        Swal.fire(result.message || 'Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!');
-        setIsRegistered(true);
       }
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
       const errorMsg = error.response?.data?.error || error.message || "Đã có lỗi xảy ra, vui lòng thử lại!";
       Swal.fire(errorMsg);
+      if (error.message.includes('đăng nhập')) {
+        navigate('/login');
+      }
     } finally {
       setIsWaiting(false);
     }
@@ -141,6 +169,8 @@ const WorkshopDetail = () => {
   const isRegistrationExpired = workshop.registrationDeadline
     ? new Date().getTime() > new Date(workshop.registrationDeadline).getTime()
     : false;
+
+  const isPendingPayment = isRegistered && registrationStatus === 'PENDING';
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '---';
@@ -399,12 +429,14 @@ const WorkshopDetail = () => {
 
               <button
                 onClick={handleRegisterClick}
-                disabled={isWaiting || isRegistrationExpired || (workshop.bookedSpots >= workshop.totalSeats && !isRegistered)}
+                disabled={isWaiting || (!isPendingPayment && isRegistrationExpired) || (workshop.bookedSpots >= workshop.totalSeats && !isRegistered)}
                 className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${
                   isWaiting
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : isRegistered
-                      ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
+                    : isPendingPayment
+                      ? 'bg-amber-500 hover:bg-amber-600 cursor-pointer'
+                      : isRegistered
+                        ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
                       : isRegistrationExpired
                         ? 'bg-gray-400 cursor-not-allowed'
                         : (workshop.bookedSpots >= workshop.totalSeats)
@@ -414,6 +446,8 @@ const WorkshopDetail = () => {
               >
                 {isWaiting ? (
                   <><Loader2 size={24} className="animate-spin" /> Đang xử lý...</>
+                ) : isPendingPayment ? (
+                  'Tiếp tục thanh toán'
                 ) : isRegistered ? (
                   <><CheckCircle2 size={24} /> Đã đăng ký — Xem vé</>
                 ) : isRegistrationExpired ? (

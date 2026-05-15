@@ -3,12 +3,10 @@ import { UploadCloud, FileText, CheckCircle, AlertCircle, Sparkles, Loader2, X }
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import geminiService from '../services/gemini.service';
+import cloudinaryService from '../services/cloudinary.service';
 
 // Set worker source for pdf.js (local from node_modules)
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
-
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 /**
  * Trích xuất toàn bộ text từ file PDF
@@ -24,25 +22,6 @@ const extractTextFromPdf = async (file) => {
     fullText += pageText + '\n';
   }
   return fullText.trim();
-};
-
-/**
- * Upload file PDF lên Cloudinary (resource_type: raw)
- */
-const uploadPdfToCloudinary = async (file) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', UPLOAD_PRESET);
-  formData.append('resource_type', 'raw');
-
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!res.ok) throw new Error('Upload PDF lên Cloudinary thất bại');
-  const data = await res.json();
-  return data.secure_url;
 };
 
 // Trạng thái xử lý
@@ -70,7 +49,8 @@ const AiPdfUploader = ({ onResult }) => {
   const fileInputRef = useRef(null);
 
   const processFile = async (file) => {
-    if (!file || file.type !== 'application/pdf') {
+    const isPdf = file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf');
+    if (!file || !isPdf) {
       setError('Chỉ chấp nhận file PDF.');
       setStep(STEPS.ERROR);
       return;
@@ -88,7 +68,7 @@ const AiPdfUploader = ({ onResult }) => {
     try {
       // 1. Upload lên Cloudinary
       setStep(STEPS.UPLOADING);
-      const pdfUrl = await uploadPdfToCloudinary(file);
+      const pdfUrl = await cloudinaryService.uploadPdf(file);
 
       // 2. Trích xuất text
       setStep(STEPS.EXTRACTING);

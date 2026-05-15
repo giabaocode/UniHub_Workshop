@@ -2,6 +2,7 @@ package com.unihub.workshop.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,6 +14,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,6 +40,12 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exceptions -> exceptions
+                    .authenticationEntryPoint((request, response, authException) ->
+                        writeSecurityError(response, HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập lại. Phiên đăng nhập không hợp lệ hoặc đã hết hạn."))
+                    .accessDeniedHandler((request, response, accessDeniedException) ->
+                        writeSecurityError(response, HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này."))
+                )
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/webhooks/**").permitAll()
@@ -54,6 +63,17 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private void writeSecurityError(HttpServletResponse response, HttpStatus status, String message) throws java.io.IOException {
+        response.setStatus(status.value());
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(String.format(
+                "{\"status\":%d,\"error\":\"%s\",\"message\":\"%s\"}",
+                status.value(),
+                status.getReasonPhrase(),
+                message
+        ));
     }
 
     @Bean

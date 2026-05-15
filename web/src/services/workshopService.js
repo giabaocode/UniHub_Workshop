@@ -1,5 +1,7 @@
-const BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/workshops`;
-const TICKET_URL = `${import.meta.env.VITE_API_BASE_URL}/tickets`;
+import { API_BASE_URL } from '../config/api';
+
+const BASE_URL = `${API_BASE_URL}/workshops`;
+const TICKET_URL = `${API_BASE_URL}/tickets`;
 
 // Tích hợp sẵn thẻ Ngrok vào Header chung
 const getAuthHeader = () => {
@@ -144,7 +146,19 @@ export const workshopService = {
           ...getAuthHeader(),
         }
       });
-      if (!response.ok) throw new Error("Lỗi khi Check-in");
+      if (!response.ok) {
+        const text = await response.text();
+        let errorMessage = "Lỗi khi Check-in";
+        if (text) {
+          try {
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch {
+            errorMessage = text;
+          }
+        }
+        throw new Error(errorMessage);
+      }
       return await response.json();
     } catch (error) {
       console.error("API Error in checkIn:", error);

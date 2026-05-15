@@ -8,15 +8,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     // Tạm tắt Rate Limit vì không có Redis
-    // private final RateLimitInterceptor rateLimitInterceptor;
+    private final RateLimitInterceptor rateLimitInterceptor;
 
-    // public WebMvcConfig(RateLimitInterceptor rateLimitInterceptor) {
-    //     this.rateLimitInterceptor = rateLimitInterceptor;
-    // }
+    public WebMvcConfig(RateLimitInterceptor rateLimitInterceptor) {
+        this.rateLimitInterceptor = rateLimitInterceptor;
+    }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // registry.addInterceptor(rateLimitInterceptor)
-        //         .addPathPatterns("/api/tickets/register/**");
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns("/api/tickets/register/**");
     }
 }

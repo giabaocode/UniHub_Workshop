@@ -29,10 +29,6 @@ const UserProfile = () => {
 
   const fileInputRef = useRef(null);
 
-  // --- ĐỌC CẤU HÌNH CLOUDINARY TỪ FILE .ENV CỦA BẠN ---
-  const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-  const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -99,7 +95,7 @@ const UserProfile = () => {
       setTimeout(() => { setMessage({ type: '', text: '' }); }, 3000);
     } catch (error) {
       console.error("Upload error:", error);
-      setMessage({ type: 'error', text: 'Lỗi tải ảnh lên mây. Hãy thử lại!' });
+      setMessage({ type: 'error', text: error.message || 'Lỗi tải ảnh lên mây. Hãy thử lại!' });
     } finally {
       setIsUploading(false);
       e.target.value = null;

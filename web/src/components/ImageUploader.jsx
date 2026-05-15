@@ -1,13 +1,11 @@
 import Swal from 'sweetalert2';
 import React, { useState, useRef } from 'react';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
+import cloudinaryService from '../services/cloudinary.service';
 
 const ImageUploader = ({ value, onChange, error }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-
-  const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME; 
-  const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -19,25 +17,13 @@ const ImageUploader = ({ value, onChange, error }) => {
     }
 
     setIsUploading(true);
-    const uploadData = new FormData();
-    uploadData.append("file", file);
-    uploadData.append("upload_preset", UPLOAD_PRESET);
 
     try {
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: uploadData,
-      });
-      const data = await response.json();
-      
-      if (data.secure_url) {
-        onChange(data.secure_url); // Truyền link ảnh ra bên ngoài Form
-      } else {
-        Swal.fire("Lỗi upload ảnh: " + (data.error?.message || "Không xác định"));
-      }
+      const imageUrl = await cloudinaryService.uploadImage(file);
+      onChange(imageUrl); // Truyền link ảnh ra bên ngoài Form
     } catch (error) {
       console.error("Lỗi upload:", error);
-      Swal.fire("Lỗi kết nối khi tải ảnh lên.");
+      Swal.fire("Lỗi upload ảnh: " + (error.message || "Không xác định"));
     } finally {
       setIsUploading(false);
     }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { LayoutDashboard, CalendarDays, Users, Settings, LogOut, Search, Bell, QrCode } from 'lucide-react';
 import { AuthContext } from '../context/authContext';
+import { API_BASE_URL } from '../config/api';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -13,10 +14,11 @@ const AdminLayout = () => {
 
   useEffect(() => {
     // Chỉ kết nối SSE nếu là ADMIN
-    if (user?.role?.trim() !== 'ADMIN') return;
+    if (user?.role?.trim() !== 'ADMIN' || !user?.token) return;
 
     // Kết nối tới luồng SSE của Backend
-    const eventSource = new EventSource('http://localhost:8080/api/notifications/stream', { withCredentials: true });
+    const streamUrl = `${API_BASE_URL}/notifications/stream?access_token=${encodeURIComponent(user.token)}`;
+    const eventSource = new EventSource(streamUrl);
 
     eventSource.onopen = () => console.log("SSE Connected");
 
