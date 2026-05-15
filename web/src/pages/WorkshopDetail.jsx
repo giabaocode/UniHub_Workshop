@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, User, Sparkles, CheckCircle2, Users, RefreshCw, FileText, Loader2 } from 'lucide-react';
 import CheckoutModal from '../components/CheckoutModal';
@@ -82,30 +83,34 @@ const WorkshopDetail = () => {
   };
 
   const handleRegisterClick = async () => {
+    // Nếu đã đăng ký, chuyển hướng thẳng sang trang xem vé
+    if (isRegistered) {
+      navigate('/my-tickets');
+      return;
+    }
+
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user || !user.token) {
-      alert("Vui lòng đăng nhập để đăng ký!");
+      Swal.fire("Vui lòng đăng nhập để đăng ký!");
       return;
     }
     setIsWaiting(true);
     try {
       const result = await ticketService.registerWorkshop(id);
-
       if (result.status === 'FREE_SUCCESS') {
+        Swal.fire('Đăng ký thành công! Vé đã được gửi tới email của bạn.');
         setIsRegistered(true);
-        navigate('/my-tickets');
-      } else if (result.status === 'PAY_AT_COUNTER') {
-        setIsRegistered(true);
-        alert(result.message);
-        navigate('/my-tickets');
       } else if (result.status === 'REQUIRE_PAYMENT') {
-        // Với vé có phí, KHÔNG ĐƯỢC set isRegistered = true ở đây
-        // Vì người dùng mới chỉ bắt đầu bước thanh toán thôi
         setPaymentData(result);
         setIsModalOpen(true);
+      } else if (result.status === 'PAY_AT_COUNTER') {
+        Swal.fire(result.message || 'Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!');
+        setIsRegistered(true);
       }
     } catch (error) {
-      alert(error.message);
+      console.error("Lỗi đăng ký:", error);
+      const errorMsg = error.response?.data?.error || error.message || "Đã có lỗi xảy ra, vui lòng thử lại!";
+      Swal.fire(errorMsg);
     } finally {
       setIsWaiting(false);
     }

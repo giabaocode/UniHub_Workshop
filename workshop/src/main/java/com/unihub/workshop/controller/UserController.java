@@ -46,12 +46,19 @@ public class UserController {
         User user = userRepository.findByEmail(currentPrincipalName)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Email cannot be changed, so we ignore profileDto.getEmail()
+        // Email cannot be changed
         user.setFullName(profileDto.getFullName());
         user.setPhoneNumber(profileDto.getPhoneNumber());
         user.setAvatarUrl(profileDto.getAvatarUrl());
-        user.setStudentId(profileDto.getStudentId());
-        user.setFaculty(profileDto.getFaculty());
+
+        // Chỉ cập nhật MSSV và Khoa nếu có giá trị và khác rỗng (Tránh lỗi Duplicate key cho Admin)
+        if (profileDto.getStudentId() != null && !profileDto.getStudentId().trim().isEmpty()) {
+            user.setStudentId(profileDto.getStudentId().trim());
+        }
+        
+        if (profileDto.getFaculty() != null && !profileDto.getFaculty().trim().isEmpty()) {
+            user.setFaculty(profileDto.getFaculty().trim());
+        }
 
         userRepository.save(user);
 

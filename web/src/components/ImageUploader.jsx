@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useRef } from 'react';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 
@@ -13,7 +14,7 @@ const ImageUploader = ({ value, onChange, error }) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, webp...)');
+      Swal.fire('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, webp...)');
       return;
     }
 
@@ -32,11 +33,11 @@ const ImageUploader = ({ value, onChange, error }) => {
       if (data.secure_url) {
         onChange(data.secure_url); // Truyền link ảnh ra bên ngoài Form
       } else {
-        alert("Lỗi upload ảnh: " + (data.error?.message || "Không xác định"));
+        Swal.fire("Lỗi upload ảnh: " + (data.error?.message || "Không xác định"));
       }
     } catch (error) {
       console.error("Lỗi upload:", error);
-      alert("Lỗi kết nối khi tải ảnh lên.");
+      Swal.fire("Lỗi kết nối khi tải ảnh lên.");
     } finally {
       setIsUploading(false);
     }

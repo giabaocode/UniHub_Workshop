@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LayoutDashboard, Ticket, DollarSign, Edit, Trash2, PlusCircle, MoreVertical, Eye, Loader2, Search, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
@@ -48,7 +49,7 @@ const AdminDashboard = () => {
       if (currentWorkshops.length === 1 && currentPage > 1) setCurrentPage(prev => prev - 1);
       setDeleteModal({ isOpen: false, id: null, name: '' });
     } catch (error) {
-      alert("Lỗi khi xóa: " + (error.message || "Không xác định"));
+      Swal.fire("Lỗi khi xóa: " + (error.message || "Không xác định"));
     } finally {
       setIsDeleting(false); // Trả lại trạng thái
     }

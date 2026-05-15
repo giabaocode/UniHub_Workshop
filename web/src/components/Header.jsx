@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/authContext';
 import { LayoutDashboard, Ticket, Calendar, LogOut, Menu, X, QrCode } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 const Header = () => {
   const location = useLocation();
@@ -55,6 +56,7 @@ const Header = () => {
 
             {user ? (
               <div className="flex items-center gap-3 border-l border-gray-100 pl-6">
+                <NotificationBell />
                 <Link to={isAdmin ? '/admin/profile' : '/profile'} className="flex items-center gap-3 group">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-[2px] group-hover:rotate-12 transition-all shrink-0 shadow-md">
                     <div className="w-full h-full rounded-full overflow-hidden border-2 border-white bg-gray-50">
@@ -87,10 +89,13 @@ const Header = () => {
           {/* Mobile: Avatar + Hamburger */}
           <div className="flex md:hidden items-center gap-2">
             {user && (
-              <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-blue-200 shrink-0">
-                <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'U')}&background=3b82f6&color=fff&bold=true`}
-                  alt="Avatar" className="w-full h-full object-cover" />
-              </div>
+              <>
+                <NotificationBell />
+                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-blue-200 shrink-0">
+                  <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'U')}&background=3b82f6&color=fff&bold=true`}
+                    alt="Avatar" className="w-full h-full object-cover" />
+                </div>
+              </>
             )}
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-all">
               {menuOpen ? <X size={22} /> : <Menu size={22} />}

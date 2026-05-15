@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react'; // FIX: Đã thêm useEffect
 import { Clock, Timer, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -44,7 +45,7 @@ const AdminEditWorkshop = () => {
                 })
             } catch (error) {
                 console.error('Error fetching workshop detail:', error);
-                alert("Không thể tải thông tin Workshop!");
+                Swal.fire("Không thể tải thông tin Workshop!");
                 navigate('/admin');
             } finally {
                 setIsLoading(false);
@@ -123,10 +124,10 @@ const AdminEditWorkshop = () => {
             setIsSubmitting(true);
 
             await workshopService.updateWorkshop(id, payload);
-            alert("Cập nhật Workshop thành công!");
+            Swal.fire("Cập nhật Workshop thành công!");
             navigate("/admin");
         } catch (error) {
-            alert("Lỗi: " + error.message);
+            Swal.fire("Lỗi: " + error.message);
         } finally {
             setIsSubmitting(false);
         }

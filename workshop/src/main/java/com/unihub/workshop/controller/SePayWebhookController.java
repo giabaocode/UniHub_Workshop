@@ -86,6 +86,12 @@ public class SePayWebhookController {
                     ticket.setPaymentStatus("PAID");
                     ticketRepository.save(ticket);
                     eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
+                    eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
+                            this,
+                            ticket.getUser(),
+                            "Thanh toán thành công",
+                            "Bạn đã mua thành công vé sự kiện: " + ticket.getWorkshop().getTitle()
+                    ));
                     return ResponseEntity.ok("Đã cấp lại vé thành công");
                 } else {
                     System.out.println("Sự kiện đã hết vé, user chuyển khoản quá muộn.");
@@ -99,6 +105,12 @@ public class SePayWebhookController {
                 ticket.setPaymentStatus("PAID");
                 ticketRepository.save(ticket);
                 eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
+                eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
+                        this,
+                        ticket.getUser(),
+                        "Thanh toán thành công",
+                        "Bạn đã mua thành công vé sự kiện: " + ticket.getWorkshop().getTitle()
+                ));
                 return ResponseEntity.ok("Đã cấp vé");
             }
 

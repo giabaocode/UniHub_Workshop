@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Duration;
 
-@Component
+// @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final StringRedisTemplate redisTemplate;

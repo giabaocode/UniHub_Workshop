@@ -21,9 +21,8 @@ public class CsvSyncJob {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Cron job: Chạy lúc 2 giờ sáng mỗi ngày.
-    // Dùng cron = "0 0 2 * * ?" làm chuẩn ban đêm, giúp hệ thống không bị lag giờ cao điểm
-    @Scheduled(cron = "0 0 2 * * ?")
+    // TẠM THỜI: Chạy 15 giây 1 lần để test
+    @Scheduled(cron = "*/15 * * * * *")
     public void syncStudentsFromCsv() {
         System.out.println("Bắt đầu đồng bộ dữ liệu sinh viên từ file CSV lúc 2:00 AM...");
         String csvFile = "students.csv";
@@ -61,10 +60,12 @@ public class CsvSyncJob {
                     user.setFaculty(faculty);
                     user.setPhoneNumber(phoneNumber);
                     
-                    // Nếu là tài khoản mới, tạo mật khẩu mặc định và set quyền
+                    // Luôn gán quyền USER cho danh sách từ CSV
+                    user.setRole("USER");
+
+                    // Nếu là tài khoản mới, tạo mật khẩu mặc định
                     if (user.getId() == null) {
                         user.setPassword(passwordEncoder.encode("123456")); 
-                        user.setRole("STUDENT");
                     }
 
                     userRepository.save(user);

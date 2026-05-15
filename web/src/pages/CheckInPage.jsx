@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect, useContext } from 'react';
 import { QrCode, XCircle, CheckCircle, Loader2, LogOut, Wifi, WifiOff } from 'lucide-react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
@@ -60,7 +61,7 @@ const CheckInPage = () => {
     setOfflineCheckIns(remaining);
     localStorage.setItem('offlineCheckIns', JSON.stringify(remaining));
     if (success.length > 0) {
-      alert(`✅ Đã đồng bộ ${success.length} check-in offline lên Server!`);
+      Swal.fire(`✅ Đã đồng bộ ${success.length} check-in offline lên Server!`);
     }
   };
 

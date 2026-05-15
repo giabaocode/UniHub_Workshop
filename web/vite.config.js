@@ -27,7 +27,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         // ĐỔI THÀNH localhost ĐỂ NODE.JS TỰ TÌM ĐÚNG ĐỊA CHỈ
-        target: 'http://localhost:8080', 
+        target: 'http://127.0.0.1:8080', 
         changeOrigin: true,
         secure: false, 
         // Thêm headers cho proxy để bypass Ngrok warning
