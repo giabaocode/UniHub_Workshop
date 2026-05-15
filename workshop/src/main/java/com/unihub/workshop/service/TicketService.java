@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.time.LocalDateTime;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -50,14 +52,17 @@ public class TicketService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop với ID: " + workshopId));
         
         // Có trong DB = Đã mua, Không có = Chưa mua
-        return ticketRepository.existsByUserAndWorkshop(user, workshop);
+        // NẾU vé đã bị huỷ do quá hạn (EXPIRED), cho phép đăng ký lại
+        return ticketRepository.findByUserAndWorkshop(user, workshop)
+                .map(t -> !t.getPaymentStatus().equals("EXPIRED"))
+                .orElse(false);
     }
 
     // 4. KIỂM TRA TRẠNG THÁI VÉ (Dành cho API Frontend gọi thăm dò)
     public String checkTicketStatus(String ticketCode) {
         Ticket ticket = ticketRepository.findByTicketCode(ticketCode)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vé: " + ticketCode));
-        return "PAID"; // Cứ có vé trong DB là mặc định "PAID"
+        return ticket.getPaymentStatus();
     }
 
     // 5. ĐĂNG KÝ VÉ VÀ TẠO QR
@@ -78,20 +83,30 @@ public class TicketService {
         // Tạo mã định danh ngụy trang: TK + 4 số UserID + 4 số WorkshopID + 4 chữ Random
         String randomStr = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         String ticketCode = String.format("TK%04d%04d%s", user.getId(), workshop.getId(), randomStr);
-        
+        // Khóa ghế (Seat Hold) NGAY LẬP TỨC cho mọi loại vé
+        int updatedRows = workshopRepository.incrementSeatIfAvailable(workshop.getId());
+        if (updatedRows == 0) {
+            throw new RuntimeException("Rất tiếc! Sự kiện đã hết vé hoặc vé cuối cùng vừa được đăng ký");
+        }
+
         Map<String, Object> response = new HashMap<>();
 
+        // NẾU SINH VIÊN ĐĂNG KÝ LẠI VÉ ĐÃ EXPIRED, TÁI SỬ DỤNG VÉ CŨ THAY VÌ TẠO MỚI (để tránh lỗi Unique Constraint)
+        Ticket ticket = ticketRepository.findByUserAndWorkshop(user, workshop).orElse(null);
+        if (ticket == null) {
+            ticket = new Ticket(ticketCode, user, workshop, false);
+        } else {
+            // Lấy lại mã vé cũ để generate QR
+            ticketCode = ticket.getTicketCode();
+            ticket.setCreatedAt(LocalDateTime.now()); // Reset lại thời gian đếm ngược 15 phút
+        }
+
         if (workshop.getPrice() == null || workshop.getPrice() == 0) {
-           int updatedRows = workshopRepository.incrementSeatIfAvailable(workshop.getId());
-           if(updatedRows == 0){
-                throw new RuntimeException("Rất tiếc! Sự kiến đã hết vé hoặc vé cuối cùng vừa được đăng ký");
-           }
-            // Vé MIỄN PHÍ: Tạo và lưu luôn. 
-            // Lưu ý: Sử dụng constructor 4 tham số từ Ticket
-            Ticket ticket = new Ticket(ticketCode, user, workshop, false);
+            // Vé MIỄN PHÍ: Trạng thái PAID
+            ticket.setPaymentStatus("PAID");
             ticketRepository.save(ticket);
             
-            // Phát sự kiện để gửi Email (Observer Pattern)
+            // Phát sự kiện để gửi Email
             eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
             
             response.put("status", "FREE_SUCCESS");
@@ -101,25 +116,20 @@ public class TicketService {
             String qrUrl = generatePaymentUrl(ticketCode, workshop.getPrice());
             
             if ("PAY_AT_COUNTER".equals(qrUrl)) {
-                // Graceful Degradation: Cho phép giữ chỗ và thanh toán tại quầy
-                try {
-                    workshop.setBookedSpots(workshop.getBookedSpots() + 1);
-                    workshopRepository.saveAndFlush(workshop);
-                } catch (ObjectOptimisticLockingFailureException e) {
-                    throw new RuntimeException("Vé cuối cùng đã có người nhanh tay hơn!");
-                }
-
-                Ticket ticket = new Ticket(ticketCode, user, workshop, false);
-                ticket.setPaymentStatus("PENDING");
+                // Graceful Degradation: Thanh toán tại quầy
+                ticket.setPaymentStatus("PAY_AT_COUNTER");
                 ticketRepository.save(ticket);
 
-                // Phát sự kiện để gửi Email (Observer Pattern)
                 eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
 
                 response.put("status", "PAY_AT_COUNTER");
                 response.put("message", "Cổng thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại sự kiện!");
                 response.put("ticketCode", ticketCode);
             } else {
+                // TẠO VÉ PENDING ĐỂ GIỮ CHỖ VÀ ĐỢI WEBHOOK
+                ticket.setPaymentStatus("PENDING");
+                ticketRepository.save(ticket);
+
                 response.put("status", "REQUIRE_PAYMENT");
                 response.put("amount", workshop.getPrice());
                 response.put("memo", ticketCode); 
@@ -129,23 +139,21 @@ public class TicketService {
         return response;
     }
 
+    @CircuitBreaker(name = "sepay", fallbackMethod = "fallbackPaymentGateway")
     public String generatePaymentUrl(String ticketCode, Double price) {
         RestTemplate restTemplate = new RestTemplate();
         String url = String.format("https://qr.sepay.vn/img?acc=%s&bank=%s&amount=%s&des=%s",
                 "0396660219", "MBBank", price.intValue(), ticketCode);
         
-        try {
-            // Gọi HTTP thật để kiểm tra cổng thanh toán
-            ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
-            if (response.getStatusCode().is2xxSuccessful()) {
-                return url;
-            }
-            // Nếu API trả về lỗi nhưng không ném Exception (VD: 404, 500)
-            return fallbackPaymentGateway(ticketCode, price, new RuntimeException("Cổng thanh toán trả về lỗi: " + response.getStatusCode()));
-        } catch (Exception e) {
-            // Nếu rớt mạng hoặc cổng thanh toán sập hẳn, tự động nhảy vào Fallback
-            return fallbackPaymentGateway(ticketCode, price, e);
+        // Gọi HTTP thật để kiểm tra cổng thanh toán
+        ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
+        if (response.getStatusCode().is2xxSuccessful()) {
+            return url;
         }
+        
+        // Nếu API trả về lỗi nhưng không văng Exception (VD: 404, 500)
+        // Chúng ta cố tình THROW Exception để Resilience4j tự động đếm lỗi
+        throw new RuntimeException("Cổng thanh toán trả về lỗi: " + response.getStatusCode());
     }
 
     public String fallbackPaymentGateway(String ticketCode, Double price, Throwable t) {

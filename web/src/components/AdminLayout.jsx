@@ -53,6 +53,11 @@ const AdminLayout = () => {
   const isAdmin = user?.role?.trim() === 'ADMIN';
   const isStaff = user?.role?.trim() === 'STAFF';
 
+  // Nếu là sinh viên (USER), đá về trang chủ
+  if (!isAdmin && !isStaff) {
+    return <Navigate to="/" replace />;
+  }
+
   // STAFF chỉ được vào trang attendees, không được vào trang admin khác
   if (isStaff) {
     return <Navigate to="/checkin" replace />;

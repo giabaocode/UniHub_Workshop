@@ -47,7 +47,14 @@ const CheckInPage = () => {
       try {
         await workshopService.checkInAttendee(attendeeId);
         success.push(attendeeId);
-      } catch (e) { /* bỏ qua lỗi lẻ */ }
+      } catch (e) { 
+        // Bắt lỗi 401 Unauthorized do JWT hết hạn
+        if (e.response?.status === 401 || (e.message && e.message.includes('401'))) {
+          alert('Phiên đăng nhập đã hết hạn! Vui lòng đăng nhập lại để tiếp tục đồng bộ dữ liệu Offline.');
+          break; // Thoát vòng lặp ngay lập tức, giữ nguyên các ID chưa đồng bộ
+        }
+        /* bỏ qua lỗi lẻ khác */ 
+      }
     }
     const remaining = toSync.filter(id => !success.includes(id));
     setOfflineCheckIns(remaining);

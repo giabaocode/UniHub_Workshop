@@ -12,4 +12,8 @@ public interface WorkshopRepository extends JpaRepository<Workshop, Long> {
     @Modifying
     @Query("UPDATE Workshop w SET w.bookedSpots = w.bookedSpots + 1 WHERE w.id = :id AND w.bookedSpots < w.totalSeats")
     int incrementSeatIfAvailable(@Param("id") Long id);   
+
+    @Modifying
+    @Query("UPDATE Workshop w SET w.bookedSpots = w.bookedSpots - 1 WHERE w.id = :id AND w.bookedSpots > 0")
+    int decrementSeat(@Param("id") Long id);
 }

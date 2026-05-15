@@ -4,6 +4,8 @@ import com.unihub.workshop.entity.Workshop;
 import com.unihub.workshop.service.WorkshopService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -35,19 +37,22 @@ public class WorkshopController {
 
     // 3. TẠO MỚI
     @PostMapping
-    public Workshop createWorkshop(@RequestBody Workshop workshop) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public Workshop createWorkshop(@Valid @RequestBody Workshop workshop) {
         return workshopService.createWorkshop(workshop);
     }
 
     // 4. CẬP NHẬT WORKSHOP (Edit)
     @PutMapping("/{id}")
-    public ResponseEntity<Workshop> updateWorkshop(@PathVariable Long id, @RequestBody Workshop workshopDetails) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Workshop> updateWorkshop(@PathVariable Long id, @Valid @RequestBody Workshop workshopDetails) {
         Workshop updatedWorkshop = workshopService.updateWorkshop(id, workshopDetails);
         return ResponseEntity.ok(updatedWorkshop);
     }
 
     // 5. XÓA WORKSHOP (Delete)
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteWorkshop(@PathVariable Long id) {
         workshopService.deleteWorkshop(id);
         return ResponseEntity.ok().build();

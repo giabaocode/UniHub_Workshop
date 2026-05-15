@@ -1,6 +1,8 @@
 package com.unihub.workshop.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ticket", uniqueConstraints = {
@@ -32,6 +34,9 @@ public class Ticket {
 
     @Column(name = "payment_status")
     private String paymentStatus = "PAID"; 
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
     // Constructor rỗng
     public Ticket() {
@@ -70,4 +75,7 @@ public class Ticket {
     
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

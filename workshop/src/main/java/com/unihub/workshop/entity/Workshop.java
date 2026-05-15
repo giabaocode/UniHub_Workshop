@@ -1,6 +1,7 @@
 package com.unihub.workshop.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -18,6 +19,7 @@ public class Workshop {
     private LocalTime startTime;
     private String room;
     private Integer totalSeats;
+    @Min(value = 0, message = "Giá vé không được âm")
     private Double price;
     private LocalDateTime registrationDeadline;
 
