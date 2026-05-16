@@ -15,6 +15,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 import com.unihub.workshop.event.TicketCreatedEvent;
+import com.unihub.workshop.event.WorkshopSeatChangedEvent;
 
 import java.util.Map;
 
@@ -86,6 +87,7 @@ public class SePayWebhookController {
                     ticket.setPaymentStatus("PAID");
                     ticketRepository.save(ticket);
                     eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
+                    eventPublisher.publishEvent(new WorkshopSeatChangedEvent(this, ticket.getWorkshop().getId()));
                     eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
                             this,
                             ticket.getUser(),

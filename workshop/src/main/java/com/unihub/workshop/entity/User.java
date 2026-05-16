@@ -36,6 +36,9 @@ public class User implements UserDetails {
 
     private String faculty;
 
+    @Column(name = "telegram_chat_id")
+    private String telegramChatId;
+
     public User() {
     }
 
@@ -143,6 +146,14 @@ public class User implements UserDetails {
 
     public void setFaculty(String faculty) {
         this.faculty = faculty;
+    }
+
+    public String getTelegramChatId() {
+        return telegramChatId;
+    }
+
+    public void setTelegramChatId(String telegramChatId) {
+        this.telegramChatId = telegramChatId;
     }
 
     @Override

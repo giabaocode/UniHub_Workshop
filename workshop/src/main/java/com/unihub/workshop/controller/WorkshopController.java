@@ -1,10 +1,13 @@
 package com.unihub.workshop.controller;
 
 import com.unihub.workshop.entity.Workshop;
+import com.unihub.workshop.service.WorkshopSeatSseService;
 import com.unihub.workshop.service.WorkshopService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -14,9 +17,11 @@ import java.util.List;
 public class WorkshopController {
 
     private final WorkshopService workshopService;
+    private final WorkshopSeatSseService workshopSeatSseService;
 
-    public WorkshopController(WorkshopService workshopService) {
+    public WorkshopController(WorkshopService workshopService, WorkshopSeatSseService workshopSeatSseService) {
         this.workshopService = workshopService;
+        this.workshopSeatSseService = workshopSeatSseService;
     }
 
     // 1. LẤY DANH SÁCH
@@ -25,8 +30,13 @@ public class WorkshopController {
         return workshopService.getAllWorkshops();
     }
 
+    @GetMapping(value = "/seat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamSeatUpdates() {
+        return workshopSeatSseService.registerEmitter();
+    }
+
     // 2. LẤY CHI TIẾT 1 WORKSHOP
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<Workshop> getWorkshopById(@PathVariable Long id) {
         // Sử dụng logic an toàn để xử lý trường hợp không tìm thấy Workshop (trả về 404 Not Found)
         return workshopService.getWorkshopById(id)

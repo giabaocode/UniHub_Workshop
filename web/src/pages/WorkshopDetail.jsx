@@ -63,6 +63,43 @@ const WorkshopDetail = () => {
     fetchWorkshopAndStatus();
   }, [id]);
 
+  useEffect(() => {
+    const seatStream = workshopService.createSeatUpdateStream({
+      onSeatUpdate: (seatUpdate) => {
+        if (Number(seatUpdate.workshopId) !== Number(id)) {
+          return;
+        }
+
+        setWorkshop((current) => current
+          ? {
+              ...current,
+              totalSeats: seatUpdate.totalSeats,
+              bookedSpots: seatUpdate.bookedSpots,
+            }
+          : current
+        );
+      },
+      onRefresh: async () => {
+        try {
+          const latestWorkshop = await workshopService.getWorkshopById(id);
+          setWorkshop((current) => current
+            ? {
+                ...current,
+                totalSeats: latestWorkshop.totalSeats,
+                bookedSpots: latestWorkshop.bookedSpots,
+              }
+            : latestWorkshop
+          );
+        } catch (error) {
+          console.error("Lỗi khi đồng bộ số ghế workshop:", error);
+        }
+      },
+      onError: (error) => console.error("Lỗi SSE cập nhật ghế:", error),
+    });
+
+    return () => seatStream.close();
+  }, [id]);
+
   const fetchAiSummary = async (ws) => {
     const workshopData = ws || workshop;
     if (!workshopData) return;

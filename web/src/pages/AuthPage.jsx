@@ -17,7 +17,6 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [studentId, setStudentId] = useState('');
   const [faculty, setFaculty] = useState('');
   const [error, setError] = useState('');
@@ -46,11 +45,6 @@ const AuthPage = () => {
           navigate('/');
         }
       } else {
-        if (password !== confirmPassword) {
-          setError('Mật khẩu xác nhận không khớp');
-          setIsLoading(false);
-          return;
-        }
         await register(fullName, email, password, studentId, faculty);
         navigate('/'); // Đăng ký xong thì mặc định là USER nên về trang chủ
       }
@@ -297,23 +291,6 @@ const AuthPage = () => {
                 </div>
               </div>
             )}
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Xác nhận mật khẩu</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="text-gray-400" size={18} />
-                </div>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required={!isLogin}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
 
             <button
               type="submit"

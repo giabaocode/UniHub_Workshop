@@ -16,17 +16,49 @@ const StudentHome = () => {
   const itemsPerPage = 6;
 
   useEffect(() => {
-    const fetchWorkshops = async () => {
+    let isMounted = true;
+
+    const fetchWorkshops = async ({ showLoading = false } = {}) => {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+
       try {
         const data = await workshopService.getAllWorkshops();
-        setWorkshops(data);
+        if (isMounted) {
+          setWorkshops(data);
+        }
       } catch (error) {
         console.error("Lỗi khi tải danh sách workshop:", error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
-    fetchWorkshops();
+
+    fetchWorkshops({ showLoading: true });
+
+    const seatStream = workshopService.createSeatUpdateStream({
+      onSeatUpdate: (seatUpdate) => {
+        setWorkshops((prev) => prev.map((workshop) => (
+          Number(workshop.id) === Number(seatUpdate.workshopId)
+            ? {
+                ...workshop,
+                totalSeats: seatUpdate.totalSeats,
+                bookedSpots: seatUpdate.bookedSpots,
+              }
+            : workshop
+        )));
+      },
+      onRefresh: () => fetchWorkshops(),
+      onError: (error) => console.error("Lỗi SSE cập nhật ghế:", error),
+    });
+
+    return () => {
+      isMounted = false;
+      seatStream.close();
+    };
   }, []);
 
   // Reset về trang 1 khi đổi bộ lọc

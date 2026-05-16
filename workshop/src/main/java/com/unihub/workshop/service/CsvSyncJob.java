@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class CsvSyncJob {
@@ -27,7 +29,6 @@ public class CsvSyncJob {
         System.out.println("Bắt đầu đồng bộ dữ liệu sinh viên từ file CSV lúc 2:00 AM...");
         String csvFile = "students.csv";
         String line;
-        String cvsSplitBy = ",";
 
         try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
             // Bỏ qua dòng tiêu đề (header)
@@ -39,14 +40,18 @@ public class CsvSyncJob {
             while ((line = br.readLine()) != null) {
                 // Try-catch từng dòng để đảm bảo 1 dòng lỗi không làm hỏng toàn bộ file
                 try {
-                    String[] data = line.split(cvsSplitBy);
-                    if (data.length < 5) continue;
+                    List<String> data = parseCsvLine(line);
+                    if (data.size() < 5) {
+                        errorCount++;
+                        System.err.println("Bỏ qua dòng CSV thiếu cột (" + data.size() + "/5): " + line);
+                        continue;
+                    }
 
-                    String studentId = data[0].trim();
-                    String fullName = data[1].trim();
-                    String email = data[2].trim();
-                    String faculty = data[3].trim();
-                    String phoneNumber = data[4].trim();
+                    String studentId = data.get(0).trim();
+                    String fullName = data.get(1).trim();
+                    String email = data.get(2).trim();
+                    String faculty = data.get(3).trim();
+                    String phoneNumber = data.get(4).trim();
 
                     // Tìm sinh viên đã tồn tại theo Email hoặc Student ID
                     User user = userRepository.findByEmail(email).orElseGet(() -> 
@@ -80,5 +85,36 @@ public class CsvSyncJob {
         } catch (IOException e) {
             System.err.println("Không thể đọc file students.csv (Có thể file chưa được đặt ở thư mục gốc của project): " + e.getMessage());
         }
+    }
+
+    static List<String> parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder field = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char current = line.charAt(i);
+
+            if (current == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    field.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (current == ',' && !inQuotes) {
+                fields.add(field.toString());
+                field.setLength(0);
+            } else {
+                field.append(current);
+            }
+        }
+
+        if (inQuotes) {
+            throw new IllegalArgumentException("CSV field đang mở quote nhưng chưa đóng");
+        }
+
+        fields.add(field.toString());
+        return fields;
     }
 }

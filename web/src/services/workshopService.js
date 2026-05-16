@@ -55,6 +55,28 @@ export const workshopService = {
     }
   },
 
+  createSeatUpdateStream: ({ onSeatUpdate, onRefresh, onError } = {}) => {
+    const eventSource = new EventSource(`${BASE_URL}/seat-stream`);
+
+    eventSource.addEventListener('SEAT_UPDATE', (event) => {
+      try {
+        onSeatUpdate?.(JSON.parse(event.data));
+      } catch (error) {
+        console.error("Invalid seat update event:", error);
+      }
+    });
+
+    eventSource.addEventListener('REFRESH_WORKSHOPS', () => {
+      onRefresh?.();
+    });
+
+    eventSource.onerror = (error) => {
+      onError?.(error);
+    };
+
+    return eventSource;
+  },
+
   getWorkshopById: async (id) => {
     try {
       const response = await fetch(`${BASE_URL}/${id}`, {

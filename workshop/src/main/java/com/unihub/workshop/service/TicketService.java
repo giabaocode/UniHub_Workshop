@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.time.LocalDateTime;
 import org.springframework.transaction.annotation.Transactional;
 import com.unihub.workshop.event.TicketCreatedEvent;
+import com.unihub.workshop.event.WorkshopSeatChangedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 
 @Service
@@ -155,6 +156,7 @@ public class TicketService {
 
                 // Phát sự kiện để gửi Email
                 eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
+                eventPublisher.publishEvent(new WorkshopSeatChangedEvent(this, workshop.getId()));
 
                 // Gửi Push Notification cho User
                 eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
@@ -168,6 +170,7 @@ public class TicketService {
                 // Vé CÓ PHÍ: giữ chỗ trước, QR được tạo local để không block request bởi cổng thanh toán ngoài.
                 ticket.setPaymentStatus("PENDING");
                 ticketRepository.saveAndFlush(ticket);
+                eventPublisher.publishEvent(new WorkshopSeatChangedEvent(this, workshop.getId()));
                 response.putAll(buildPaymentResponse(ticketCode, workshop));
                 cachePaymentRegistration(registrationCacheKey, response);
             }
