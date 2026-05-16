@@ -7,7 +7,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    // Tạm tắt Rate Limit vì không có Redis
     private final RateLimitInterceptor rateLimitInterceptor;
 
     public WebMvcConfig(RateLimitInterceptor rateLimitInterceptor) {

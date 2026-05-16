@@ -21,8 +21,8 @@ public class CsvSyncJob {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // TẠM THỜI: Chạy 15 giây 1 lần để test
-    @Scheduled(cron = "*/15 * * * * *")
+    // Chạy vào 2:00 AM mỗi ngày thay vì 15 giây 1 lần để tránh sập connection pool khi test
+    @Scheduled(cron = "0 0 2 * * *")
     public void syncStudentsFromCsv() {
         System.out.println("Bắt đầu đồng bộ dữ liệu sinh viên từ file CSV lúc 2:00 AM...");
         String csvFile = "students.csv";

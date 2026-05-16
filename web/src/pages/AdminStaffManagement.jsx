@@ -35,7 +35,12 @@ const AdminStaffManagement = () => {
 
   const handleCreateStaff = async () => {
     if (!formData.fullName || (!editingId && (!formData.email || !formData.password))) {
-      Swal.fire("Vui lòng điền đủ thông tin bắt buộc!");
+      Swal.fire({
+        title: 'Thiếu thông tin',
+        text: 'Vui lòng điền đủ thông tin bắt buộc!',
+        icon: 'warning',
+        confirmButtonColor: '#3b82f6'
+      });
       return;
     }
     setIsSubmitting(true);
@@ -55,13 +60,26 @@ const AdminStaffManagement = () => {
         body: JSON.stringify(formData)
       });
       if (!response.ok) throw new Error(editingId ? "Lỗi khi cập nhật!" : "Lỗi khi tạo nhân sự!");
-      Swal.fire(editingId ? "✅ Đã cập nhật thành công!" : "✅ Đã tạo tài khoản nhân sự thành công!");
+      
+      Swal.fire({
+        title: 'Thành công!',
+        text: editingId ? 'Đã cập nhật thông tin nhân sự thành công!' : 'Đã tạo tài khoản nhân sự thành công!',
+        icon: 'success',
+        confirmButtonColor: '#10b981',
+        confirmButtonText: 'Đóng'
+      });
+      
       setIsModalOpen(false);
       setFormData({ fullName: '', email: '', password: '' });
       setEditingId(null);
       fetchStaff();
     } catch (e) {
-      Swal.fire(e.message);
+      Swal.fire({
+        title: 'Thất bại',
+        text: e.message,
+        icon: 'error',
+        confirmButtonColor: '#ef4444'
+      });
     } finally {
       setIsSubmitting(false);
     }

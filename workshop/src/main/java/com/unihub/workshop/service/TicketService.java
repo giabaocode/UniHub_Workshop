@@ -29,6 +29,7 @@ public class TicketService {
     private final WorkshopRepository workshopRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentGatewayService paymentGatewayService;
+    private final java.util.concurrent.ConcurrentHashMap<String, Object> idempotencyLocks = new java.util.concurrent.ConcurrentHashMap<>();
 
     // 1. CONSTRUCTOR LUÔN NẰM TRÊN CÙNG
     public TicketService(TicketRepository ticketRepository, UserRepository userRepository, WorkshopRepository workshopRepository, ApplicationEventPublisher eventPublisher, PaymentGatewayService paymentGatewayService) {
@@ -87,8 +88,15 @@ public class TicketService {
     @Transactional
     public Map<String, Object> registerWorkshop(Long workshopId) {
         User user = getCurrentUser();
-        Workshop workshop = workshopRepository.findByIdForUpdate(workshopId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop với ID: " + workshopId));
+        
+        // --- BẮT ĐẦU CƠ CHẾ IDEMPOTENCY LOCK ---
+        String lockKey = user.getId() + "-" + workshopId;
+        Object lock = idempotencyLocks.computeIfAbsent(lockKey, k -> new Object());
+        
+        synchronized (lock) {
+            try {
+                Workshop workshop = workshopRepository.findByIdForUpdate(workshopId)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop với ID: " + workshopId));
 
         Ticket existingTicket = ticketRepository.findByUserAndWorkshop(user, workshop).orElse(null);
         if (existingTicket != null && !"EXPIRED".equals(existingTicket.getPaymentStatus())) {
@@ -178,6 +186,11 @@ public class TicketService {
             }
         }
         return response;
+            } finally {
+                // Tùy chọn dọn dẹp lock khỏi bộ nhớ sau khi xử lý xong (nếu cần)
+                // idempotencyLocks.remove(lockKey);
+            }
+        }
     }
 
 }
