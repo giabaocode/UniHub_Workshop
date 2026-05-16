@@ -22,8 +22,11 @@ public class SeatReleaseJob {
         syncBookedSeats();
     }
 
-    // Chạy ngầm mỗi 1 phút để tự sửa counter nếu ticket bị sửa/xoá trực tiếp trong DB.
-    @Scheduled(fixedRate = 60000)
+    // Chạy nền thưa hơn để không tranh lock workshop trong các đợt mở đăng ký cao điểm.
+    @Scheduled(
+            initialDelayString = "${app.seat-sync.initial-delay-ms:600000}",
+            fixedDelayString = "${app.seat-sync.fixed-delay-ms:600000}"
+    )
     @Transactional
     public void syncBookedSeats() {
         int updatedWorkshops = workshopRepository.syncBookedSpotsFromActiveTickets();

@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
     @UniqueConstraint(columnNames = {"user_id", "workshop_id"})
 }, indexes = {
     @Index(name = "idx_ticket_code", columnList = "ticket_code"),
-    @Index(name = "idx_ticket_user_id", columnList = "user_id")
+    @Index(name = "idx_ticket_user_id", columnList = "user_id"),
+    @Index(name = "idx_ticket_workshop_payment", columnList = "workshop_id, payment_status")
 })
 public class Ticket {
 

@@ -3,11 +3,12 @@ package com.unihub.workshop.service;
 import com.unihub.workshop.entity.Ticket;
 import com.unihub.workshop.event.TicketCreatedEvent;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.context.event.EventListener;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 public class EmailNotificationListener {
@@ -19,9 +20,9 @@ public class EmailNotificationListener {
     }
 
     // Observer Pattern: Lắng nghe sự kiện TicketCreatedEvent
-    // Dùng @Async để không block luồng xử lý chính
+    // Dùng @Async + AFTER_COMMIT để không block luồng xử lý chính và chỉ gửi khi transaction thành công.
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleTicketCreatedEvent(TicketCreatedEvent event) {
         Ticket ticket = event.getTicket();
         String toEmail = ticket.getUser().getEmail();

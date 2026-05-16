@@ -1,30 +1,28 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 
 export const options = {
   scenarios: {
-    // 60% truy cập trong 3 phút đầu (7200 users)
+    // 60% truy cập trong 3 phút đầu: 7.200 sinh viên / 180s = 40 lượt/s
     spike_3_mins: {
-      executor: 'ramping-vus',
-      startVUs: 0,
-      stages: [
-        { duration: '30s', target: 2400 }, // Tăng nhanh trong 30s
-        { duration: '2m', target: 4800 },  // Duy trì đỉnh điểm
-        { duration: '30s', target: 0 },    // Giảm dần
-      ],
-      gracefulRampDown: '30s',
+      executor: 'constant-arrival-rate',
+      rate: 7200,
+      timeUnit: '3m',
+      duration: '3m',
+      preAllocatedVUs: 300,
+      maxVUs: 1500,
+      exec: 'registerOnce',
     },
-    // 40% rải rác trong 7 phút sau (4800 users)
+    // 40% còn lại trong 7 phút sau: 4.800 sinh viên / 420s ~= 11,4 lượt/s
     steady_7_mins: {
-      executor: 'ramping-vus',
-      startTime: '3m', // Bắt đầu sau khi spike 3 phút kết thúc
-      startVUs: 0,
-      stages: [
-        { duration: '1m', target: 1000 },
-        { duration: '5m', target: 1000 },
-        { duration: '1m', target: 0 },
-      ],
+      executor: 'constant-arrival-rate',
+      startTime: '3m',
+      rate: 4800,
+      timeUnit: '7m',
+      duration: '7m',
+      preAllocatedVUs: 100,
+      maxVUs: 800,
+      exec: 'registerOnce',
     },
   },
   thresholds: {
@@ -33,24 +31,29 @@ export const options = {
   },
 };
 
-const BASE_URL = 'http://localhost:8080/api';
-const WORKSHOP_ID = 1; // Thay ID workshop bạn muốn test
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081/api';
+const WORKSHOP_ID = Number(__ENV.WORKSHOP_ID || 1);
+const PASSWORD = 'password123';
 
-// Mảng chứa các token đã được lấy từ trước (Bạn có thể gen sẵn và paste vào đây)
-// Để kịch bản thực tế, script này sẽ tạo user ngẫu nhiên và lấy token ngay lúc chạy.
-// LƯU Ý: Nếu tạo user ngay lúc chạy, database có thể bị nghẽn ở khâu Register. 
-// Khuyến nghị tốt nhất: Tắt Security tạm thời cho Endpoint này khi Load Test, hoặc dùng data từ file CSV.
+function randomString(length) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let value = '';
+  for (let i = 0; i < length; i++) {
+    value += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return value;
+}
 
-export default function () {
-  // 1. (Tùy chọn) Bypass auth hoặc register user. 
-  // Dưới đây là ví dụ tự động đăng ký 1 user giả mạo cho mỗi VU để lấy JWT.
-  const randomEmail = `testuser_${randomString(10)}@example.com`;
+export function registerOnce() {
+  // Mỗi iteration đại diện cho 1 sinh viên: tạo tài khoản test, lấy JWT, rồi bấm đăng ký 1 lần.
+  // Nếu muốn đo riêng endpoint /tickets/register, hãy chuẩn bị sẵn token và bỏ bước /auth/register.
+  const randomEmail = `load_${Date.now()}_${__ITER}_${randomString(8)}@example.com`;
   
   const regRes = http.post(`${BASE_URL}/auth/register`, JSON.stringify({
     fullName: 'Test User',
     email: randomEmail,
-    password: 'password123',
-    studentId: randomString(8)
+    password: PASSWORD,
+    studentId: `LOAD_${randomString(12)}`
   }), {
     headers: { 'Content-Type': 'application/json' }
   });
@@ -62,7 +65,7 @@ export default function () {
     // Fallback thử login nếu register lỗi
     const loginRes = http.post(`${BASE_URL}/auth/login`, JSON.stringify({
       email: randomEmail,
-      password: 'password123'
+      password: PASSWORD
     }), { headers: { 'Content-Type': 'application/json' }});
     if (loginRes.status === 200) token = loginRes.json('token');
   }
@@ -78,19 +81,12 @@ export default function () {
     'X-Forwarded-For': `192.168.1.${Math.floor(Math.random() * 255)}` 
   };
 
-  // Gửi dồn dập 6 requests liên tục để test Rate Limit (Tối đa 5 req/10s)
-  for(let i=0; i<6; i++) {
-    let res = http.post(`${BASE_URL}/tickets/register/${WORKSHOP_ID}`, null, { headers });
-    
-    check(res, {
-      'is status 200 (Success)': (r) => r.status === 200,
-      'is status 400 (Bad Request - Đã đăng ký/Hết vé)': (r) => r.status === 400,
-      'is status 429 (Rate Limited)': (r) => r.status === 429,
-    });
-    
-    // Nếu request đầu tiên thành công, ngưng spam để test user khác
-    if (res.status === 200) break;
-  }
+  const res = http.post(`${BASE_URL}/tickets/register/${WORKSHOP_ID}`, null, { headers });
+
+  check(res, {
+    'registered or business rejected': (r) => [200, 400, 429].includes(r.status),
+    'no server error': (r) => r.status < 500,
+  });
 
   sleep(1);
 }

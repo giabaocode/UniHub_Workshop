@@ -21,6 +21,9 @@ public class PaymentGatewayService {
     @Value("${app.payment.sepay.enabled:true}")
     private boolean sepayEnabled;
 
+    @Value("${app.payment.sepay.validate-url:false}")
+    private boolean validateUrl;
+
     @CircuitBreaker(name = "sepay", fallbackMethod = "fallbackPaymentGateway")
     public String generatePaymentUrl(String ticketCode, Double price) {
         if (!sepayEnabled) {
@@ -28,6 +31,9 @@ public class PaymentGatewayService {
         }
 
         String url = buildPaymentUrl(ticketCode, price);
+        if (!validateUrl) {
+            return url;
+        }
 
         ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
         if (response.getStatusCode().is2xxSuccessful()) {

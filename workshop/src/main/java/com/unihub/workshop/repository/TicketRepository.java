@@ -28,6 +28,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByWorkshopIdAndPaymentStatusIn(Long workshopId, List<String> paymentStatuses);
     long countByWorkshopIdAndPaymentStatusIn(Long workshopId, List<String> paymentStatuses);
     boolean existsByUserIdAndWorkshopId(Long userId, Long workshopId);
+    Optional<Ticket> findByUserIdAndWorkshopId(Long userId, Long workshopId);
 
     List<Ticket> findByPaymentStatusAndCreatedAtBefore(String status, LocalDateTime time);
 

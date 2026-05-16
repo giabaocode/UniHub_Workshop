@@ -5,11 +5,13 @@ import com.unihub.workshop.entity.User;
 import com.unihub.workshop.event.TicketCreatedEvent;
 import com.unihub.workshop.repository.NotificationRepository;
 import com.unihub.workshop.repository.UserRepository;
-import org.springframework.context.event.EventListener;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -157,7 +159,8 @@ public class NotificationController {
     // ==========================================
     // 6. EVENT LISTENER (Giữ nguyên cho Admin, có thể thêm cho user nếu cần)
     // ==========================================
-    @EventListener
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onTicketCreated(TicketCreatedEvent event) {
         String studentName = event.getTicket().getUser().getFullName();
         String workshopTitle = event.getTicket().getWorkshop().getTitle();
@@ -175,7 +178,8 @@ public class NotificationController {
         }
     }
 
-    @EventListener
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onUserNotification(com.unihub.workshop.event.UserNotificationEvent event) {
         sendPushNotification(event.getUser(), event.getTitle(), event.getMessage());
     }
