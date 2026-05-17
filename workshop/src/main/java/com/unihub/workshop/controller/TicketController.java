@@ -88,7 +88,8 @@ public class TicketController {
 
         List<Map<String, Object>> ticketList = new ArrayList<>();
         for (Ticket ticket : tickets) {
-            if ("EXPIRED".equals(ticket.getPaymentStatus())) {
+            if ("EXPIRED".equals(ticket.getPaymentStatus())
+                    || "CANCELLED".equalsIgnoreCase(ticket.getPaymentStatus())) {
                 continue;
             }
 
@@ -98,8 +99,13 @@ public class TicketController {
                     continue;
                 }
 
+                // Workshop đã bị admin hủy/xóa -> không hiển thị trong "Vé của tôi" nữa
+                if ("CANCELLED".equalsIgnoreCase(ws.getStatus())) {
+                    continue;
+                }
+
                 Map<String, Object> map = new HashMap<>();
-                boolean checkInAllowed = canCheckIn(ticket) && !"CANCELLED".equalsIgnoreCase(ws.getStatus());
+                boolean checkInAllowed = canCheckIn(ticket);
 
                 map.put("workshopId", ws.getId());
                 map.put("id", ticket.getTicketCode());
@@ -108,7 +114,7 @@ public class TicketController {
                 map.put("room", ws.getRoom());
                 map.put("date", ws.getEventDate() != null ? ws.getEventDate().format(dateFormatter) : "---");
                 map.put("time", ws.getStartTime() != null ? ws.getStartTime().format(timeFormatter) : "---");
-                map.put("status", "CANCELLED".equalsIgnoreCase(ws.getStatus()) ? "Sự kiện đã hủy" : getTicketStatusLabel(ticket));
+                map.put("status", getTicketStatusLabel(ticket));
                 map.put("paymentStatus", ticket.getPaymentStatus());
                 map.put("workshopStatus", ws.getStatus());
                 map.put("canCheckIn", checkInAllowed);
