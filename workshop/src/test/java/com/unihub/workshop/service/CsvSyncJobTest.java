@@ -31,4 +31,28 @@ class CsvSyncJobTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("chưa đóng");
     }
+
+    @Test
+    void validateStudentRowRejectsLeadingCommaRow() {
+        assertThatThrownBy(() -> CsvSyncJob.validateStudentRow(
+                CsvSyncJob.parseCsvLine(",SE123456,Dam Mi,dm@fpt.edu.vnKK,091203203")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("student_id rỗng");
+    }
+
+    @Test
+    void validateStudentRowRejectsMissingColumns() {
+        assertThatThrownBy(() -> CsvSyncJob.validateStudentRow(
+                CsvSyncJob.parseCsvLine("SE223456,BAO,0121203203")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Sai số cột (3/5)");
+    }
+
+    @Test
+    void validateStudentRowRejectsCommaInsideUnquotedEmail() {
+        assertThatThrownBy(() -> CsvSyncJob.validateStudentRow(
+                CsvSyncJob.parseCsvLine("SE950004,Pham Thi D,ptd@fpt,edu.vn,Truyen Thong,0909876543")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Sai số cột (6/5)");
+    }
 }

@@ -11,9 +11,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 public class CsvSyncJob {
+    private static final int EXPECTED_COLUMNS = 5;
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@,]+@[^\\s@,]+\\.[^\\s@,]+$");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -23,10 +26,13 @@ public class CsvSyncJob {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Chạy vào 2:00 AM mỗi ngày thay vì 15 giây 1 lần để tránh sập connection pool khi test
-    @Scheduled(cron = "0 0 2 * * *")
+    // Đồng bộ CSV định kỳ, mặc định mỗi 10 giây cho môi trường workshop/demo.
+    @Scheduled(
+            initialDelayString = "${app.csv-sync.initial-delay-ms:10000}",
+            fixedDelayString = "${app.csv-sync.fixed-delay-ms:10000}"
+    )
     public void syncStudentsFromCsv() {
-        System.out.println("Bắt đầu đồng bộ dữ liệu sinh viên từ file CSV lúc 2:00 AM...");
+        System.out.println("Bắt đầu đồng bộ dữ liệu sinh viên từ file CSV...");
         String csvFile = "students.csv";
         String line;
 
@@ -36,16 +42,14 @@ public class CsvSyncJob {
 
             int successCount = 0;
             int errorCount = 0;
+            int lineNumber = 1;
 
             while ((line = br.readLine()) != null) {
+                lineNumber++;
                 // Try-catch từng dòng để đảm bảo 1 dòng lỗi không làm hỏng toàn bộ file
                 try {
                     List<String> data = parseCsvLine(line);
-                    if (data.size() < 5) {
-                        errorCount++;
-                        System.err.println("Bỏ qua dòng CSV thiếu cột (" + data.size() + "/5): " + line);
-                        continue;
-                    }
+                    validateStudentRow(data);
 
                     String studentId = data.get(0).trim();
                     String fullName = data.get(1).trim();
@@ -75,8 +79,9 @@ public class CsvSyncJob {
 
                     userRepository.save(user);
                     successCount++;
+                    System.out.println("[CSV][OK] Dòng " + lineNumber + ": " + studentId + " - " + email);
                 } catch (Exception e) {
-                    System.err.println("Lỗi khi đồng bộ dòng: " + line + " - Chi tiết: " + e.getMessage());
+                    System.err.println("[CSV][FAIL] Dòng " + lineNumber + ": " + e.getMessage() + " | raw=\"" + line + "\"");
                     errorCount++;
                 }
             }
@@ -84,6 +89,37 @@ public class CsvSyncJob {
 
         } catch (IOException e) {
             System.err.println("Không thể đọc file students.csv (Có thể file chưa được đặt ở thư mục gốc của project): " + e.getMessage());
+        }
+    }
+
+    static void validateStudentRow(List<String> data) {
+        if (data.size() != EXPECTED_COLUMNS) {
+            String hint = data.size() > EXPECTED_COLUMNS
+                    ? " Có thể dòng có dấu phẩy thừa trong một field, ví dụ email bị tách thành nhiều cột."
+                    : " Dòng đang thiếu cột.";
+            throw new IllegalArgumentException("Sai số cột (" + data.size() + "/" + EXPECTED_COLUMNS + ")." + hint);
+        }
+
+        String studentId = data.get(0).trim();
+        String fullName = data.get(1).trim();
+        String email = data.get(2).trim();
+        String faculty = data.get(3).trim();
+        String phoneNumber = data.get(4).trim();
+
+        if (studentId.isEmpty()) {
+            throw new IllegalArgumentException("student_id rỗng. Có thể dòng bị thừa dấu phẩy ở đầu.");
+        }
+        if (fullName.isEmpty()) {
+            throw new IllegalArgumentException("full_name rỗng.");
+        }
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            throw new IllegalArgumentException("email không hợp lệ: " + email);
+        }
+        if (faculty.isEmpty()) {
+            throw new IllegalArgumentException("faculty rỗng.");
+        }
+        if (phoneNumber.isEmpty()) {
+            throw new IllegalArgumentException("phone_number rỗng.");
         }
     }
 

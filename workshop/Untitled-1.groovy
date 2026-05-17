@@ -2,41 +2,34 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { SharedArray } from 'k6/data';
 
-// 1. Đọc file tokens.json ĐÚNG 1 LẦN vào bộ nhớ dùng chung
 const tokens = new SharedArray('jwt tokens', function () {
   return JSON.parse(open('./tokens.json'));
 });
 
-// 2. Cấu hình kịch bản test 10.000 VUs
 export const options = {
   scenarios: {
     load_test: {
       executor: 'ramping-vus',
       startVUs: 0,
       stages: [
-        // Bơm từ 0 lên 10.000 user từ từ trong 3 phút (Tránh sốc mạng)
         { duration: '1m', target: 12000 },
-        // Giữ vững mức 10.000 user strong 5 phút
         { duration: '5m', target: 12000 },
-        // Hạ nhiệt dần về 0 trong 1 phút
         { duration: '1m', target: 0 },
       ],
     },
   },
   thresholds: {
-    // Kịch bản thất bại nếu tỉ lệ lỗi vượt 1%
+    // that bai neu ti le loi vuot 1%
     http_req_failed: ['rate<0.01'], 
-    // 95% request phải hoàn thành dưới 2 giây
+    // 95% request phai hoan thanh duoi 2s
     http_req_duration: ['p(95)<2000'], 
   },
 };
 
-const BASE_URL = 'http://127.0.0.1:8081/api'; // Nhớ trỏ đúng port Spring Boot
+const BASE_URL = 'http://127.0.0.1:8081/api'; 
 const WORKSHOP_ID = 1;
 
-// 3. Hành động của từng User Ảo
 export default function () {
-  // Bốc ngẫu nhiên 1 token từ mảng data đã nạp
   const randomToken = tokens[Math.floor(Math.random() * tokens.length)];
 
   const headers = {

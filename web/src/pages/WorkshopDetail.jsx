@@ -431,21 +431,6 @@ const WorkshopDetail = () => {
                   </div>
                 </div>
 
-                {/* PDF download link */}
-                {workshop.pdfUrl && (
-                  <div className="mt-6">
-                    <a
-                      href={workshop.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-medium text-sm hover:bg-blue-100 transition-colors border border-blue-100"
-                    >
-                      <FileText size={18} />
-                      Xem tài liệu PDF chi tiết
-                    </a>
-                  </div>
-                )}
-
                 <div className="mt-10">
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     Sơ đồ phòng
