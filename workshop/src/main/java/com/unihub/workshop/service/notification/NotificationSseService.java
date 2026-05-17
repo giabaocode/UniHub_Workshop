@@ -2,10 +2,13 @@ package com.unihub.workshop.service.notification;
 
 import com.unihub.workshop.entity.Notification;
 import com.unihub.workshop.entity.User;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -15,6 +18,11 @@ public class NotificationSseService {
 
     private final CopyOnWriteArrayList<SseEmitter> adminEmitters = new CopyOnWriteArrayList<>();
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<SseEmitter>> userEmitters = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper;
+
+    public NotificationSseService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     public SseEmitter registerAdminEmitter() {
         SseEmitter emitter = new SseEmitter(3600000L);
@@ -66,8 +74,18 @@ public class NotificationSseService {
             return;
         }
 
-        String jsonPayload = String.format("{\"id\": %d, \"title\": \"%s\", \"message\": \"%s\", \"createdAt\": \"%s\"}",
-                notification.getId(), notification.getTitle(), notification.getMessage(), notification.getCreatedAt().toString());
+        String jsonPayload;
+        try {
+            jsonPayload = objectMapper.writeValueAsString(Map.of(
+                    "id", notification.getId(),
+                    "title", notification.getTitle(),
+                    "message", notification.getMessage(),
+                    "createdAt", notification.getCreatedAt().toString()
+            ));
+        } catch (JsonProcessingException e) {
+            System.err.println("Không thể serialize user notification SSE: " + e.getMessage());
+            return;
+        }
 
         for (SseEmitter emitter : emitters) {
             try {

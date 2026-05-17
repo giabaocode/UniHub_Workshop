@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import org.springframework.transaction.annotation.Transactional;
 import com.unihub.workshop.event.TicketCreatedEvent;
 import com.unihub.workshop.event.WorkshopSeatChangedEvent;
+import com.unihub.workshop.service.notification.UserNotificationService;
 import org.springframework.context.ApplicationEventPublisher;
 
 @Service
@@ -30,6 +31,7 @@ public class TicketService {
     private final WorkshopRepository workshopRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentGatewayService paymentGatewayService;
+    private final UserNotificationService userNotificationService;
     private final ConcurrentHashMap<String, RegistrationCacheEntry> registrationCache = new ConcurrentHashMap<>();
 
     @Value("${app.registration-cache.enabled:true}")
@@ -42,12 +44,18 @@ public class TicketService {
     private int registrationCacheMaxSize;
 
     // 1. CONSTRUCTOR LUÔN NẰM TRÊN CÙNG
-    public TicketService(TicketRepository ticketRepository, UserRepository userRepository, WorkshopRepository workshopRepository, ApplicationEventPublisher eventPublisher, PaymentGatewayService paymentGatewayService) {
+    public TicketService(TicketRepository ticketRepository,
+                         UserRepository userRepository,
+                         WorkshopRepository workshopRepository,
+                         ApplicationEventPublisher eventPublisher,
+                         PaymentGatewayService paymentGatewayService,
+                         UserNotificationService userNotificationService) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.workshopRepository = workshopRepository;
         this.eventPublisher = eventPublisher;
         this.paymentGatewayService = paymentGatewayService;
+        this.userNotificationService = userNotificationService;
     }
 
     // 2. HÀM DÙNG CHUNG (PRIVATE)
@@ -162,10 +170,11 @@ public class TicketService {
                 eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
                 eventPublisher.publishEvent(new WorkshopSeatChangedEvent(this, workshop.getId()));
 
-                // Gửi Push Notification cho User
-                eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
-                    this, user, "Đăng ký thành công", "Bạn đã đăng ký thành công sự kiện: " + workshop.getTitle()
-                ));
+                userNotificationService.notifyUser(
+                    user,
+                    "Đăng ký thành công",
+                    "Bạn đã đăng ký thành công sự kiện: " + workshop.getTitle()
+                );
 
                 response.put("status", "FREE_SUCCESS");
                 response.put("ticketCode", ticketCode);
@@ -175,6 +184,11 @@ public class TicketService {
                 ticket.setPaymentStatus("PENDING");
                 ticketRepository.saveAndFlush(ticket);
                 eventPublisher.publishEvent(new WorkshopSeatChangedEvent(this, workshop.getId()));
+                userNotificationService.notifyUser(
+                    user,
+                    "Giữ chỗ thành công",
+                    "Bạn đã giữ chỗ cho sự kiện: " + workshop.getTitle() + ". Vui lòng hoàn tất thanh toán để xác nhận vé."
+                );
                 response.putAll(buildPaymentResponse(ticketCode, workshop));
                 cachePaymentRegistration(registrationCacheKey, response);
             }

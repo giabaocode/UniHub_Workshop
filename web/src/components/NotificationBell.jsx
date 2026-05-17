@@ -10,6 +10,44 @@ const NotificationBell = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
 
+  const isCancellationNotice = (notification) =>
+    notification.title?.toLowerCase().includes('hủy') ||
+    notification.message?.toLowerCase().includes('đã bị hủy');
+
+  const canUseBrowserNotifications = () =>
+    'Notification' in window &&
+    (window.isSecureContext ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1');
+
+  const requestBrowserNotificationPermission = async () => {
+    if (!canUseBrowserNotifications() || Notification.permission !== 'default') {
+      return window.Notification?.permission;
+    }
+
+    try {
+      return await Notification.requestPermission();
+    } catch (error) {
+      console.error('Không thể xin quyền push notification', error);
+      return Notification.permission;
+    }
+  };
+
+  const showBrowserNotification = async (notification) => {
+    if (!canUseBrowserNotifications() || !isCancellationNotice(notification)) return;
+
+    try {
+      if (Notification.permission === 'granted') {
+        new Notification(notification.title, {
+          body: notification.message,
+          tag: `notification-${notification.id}`,
+        });
+      }
+    } catch (error) {
+      console.error('Không thể hiển thị push notification', error);
+    }
+  };
+
   useEffect(() => {
     if (!user || !user.token) return;
 
@@ -42,6 +80,7 @@ const NotificationBell = () => {
       const newNotif = JSON.parse(event.data);
       setNotifications(prev => [newNotif, ...prev]);
       setUnreadCount(prev => prev + 1);
+      showBrowserNotification(newNotif);
       
       // Toast pop-up báo notification mới
       Swal.fire({
@@ -102,7 +141,9 @@ const NotificationBell = () => {
     }
   };
 
-  const toggleDropdown = () => {
+  const toggleDropdown = async () => {
+    await requestBrowserNotificationPermission();
+
     const nextState = !isOpen;
     setIsOpen(nextState);
     

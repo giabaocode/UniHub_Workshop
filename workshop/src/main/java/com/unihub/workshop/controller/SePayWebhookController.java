@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 import com.unihub.workshop.event.TicketCreatedEvent;
 import com.unihub.workshop.event.WorkshopSeatChangedEvent;
+import com.unihub.workshop.service.notification.UserNotificationService;
 
 import java.util.Map;
 
@@ -29,17 +30,20 @@ public class SePayWebhookController {
     private final WorkshopRepository workshopRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final RefundLogRepository refundLogRepository;
+    private final UserNotificationService userNotificationService;
 
     public SePayWebhookController(TicketRepository ticketRepository, 
                                   UserRepository userRepository, 
                                   WorkshopRepository workshopRepository,
                                   ApplicationEventPublisher eventPublisher,
-                                  RefundLogRepository refundLogRepository) {
+                                  RefundLogRepository refundLogRepository,
+                                  UserNotificationService userNotificationService) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.workshopRepository = workshopRepository;
         this.eventPublisher = eventPublisher;
         this.refundLogRepository = refundLogRepository;
+        this.userNotificationService = userNotificationService;
     }
 
     @Transactional
@@ -88,12 +92,11 @@ public class SePayWebhookController {
                     ticketRepository.save(ticket);
                     eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
                     eventPublisher.publishEvent(new WorkshopSeatChangedEvent(this, ticket.getWorkshop().getId()));
-                    eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
-                            this,
+                    userNotificationService.notifyUser(
                             ticket.getUser(),
                             "Thanh toán thành công",
                             "Bạn đã mua thành công vé sự kiện: " + ticket.getWorkshop().getTitle()
-                    ));
+                    );
                     return ResponseEntity.ok("Đã cấp lại vé thành công");
                 } else {
                     System.out.println("Sự kiện đã hết vé, user chuyển khoản quá muộn.");
@@ -107,12 +110,11 @@ public class SePayWebhookController {
                 ticket.setPaymentStatus("PAID");
                 ticketRepository.save(ticket);
                 eventPublisher.publishEvent(new TicketCreatedEvent(this, ticket));
-                eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
-                        this,
+                userNotificationService.notifyUser(
                         ticket.getUser(),
                         "Thanh toán thành công",
                         "Bạn đã mua thành công vé sự kiện: " + ticket.getWorkshop().getTitle()
-                ));
+                );
                 return ResponseEntity.ok("Đã cấp vé");
             }
 

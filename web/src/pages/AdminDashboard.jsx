@@ -426,13 +426,26 @@ const StatCard = ({ icon, label, value, color, subValue }) => {
   );
 };
 
+const hasWorkshopDatePassed = (eventDate) => {
+  if (!eventDate) return false;
+
+  const today = new Date();
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const workshopDate = new Date(`${eventDate}T00:00:00`);
+
+  return workshopDate < todayStart;
+};
+
 const WorkshopRow = ({ ws, onDelete, onCancel }) => {
   const registered = ws.bookedSpots || 0;
   const progress =
     ws.totalSeats > 0 ? Math.round((registered / ws.totalSeats) * 100) : 0;
 
-  const today = new Date().toISOString().split("T")[0];
-  const isPast = ws.eventDate < today;
+  const isPast = hasWorkshopDatePassed(ws.eventDate);
   const isCancelled =
     (ws.status || "").toString().toUpperCase() === "CANCELLED";
 
@@ -514,14 +527,15 @@ const WorkshopRow = ({ ws, onDelete, onCancel }) => {
               <AlertTriangle size={18} />
             </button>
           )}
-          {/* Xóa cứng — chỉ chạy được khi chưa có vé. Backend sẽ chặn nếu có vé. */}
-          <button
-            onClick={() => onDelete(ws.id, ws.title)}
-            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-            title="Xóa"
-          >
-            <Trash2 size={18} />
-          </button>
+          {(isCancelled || isPast) && (
+            <button
+              onClick={() => onDelete(ws.id, ws.title)}
+              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              title={isCancelled ? "Xóa workshop đã hủy" : "Xóa workshop đã kết thúc"}
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
         </div>
       </td>
     </tr>

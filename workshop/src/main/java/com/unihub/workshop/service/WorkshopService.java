@@ -5,9 +5,11 @@ import com.unihub.workshop.entity.Ticket;
 import com.unihub.workshop.entity.Workshop;
 import com.unihub.workshop.event.UserNotificationEvent;
 import com.unihub.workshop.event.WorkshopSeatChangedEvent;
+import com.unihub.workshop.repository.PaymentTransactionRepository;
 import com.unihub.workshop.repository.RefundLogRepository;
 import com.unihub.workshop.repository.TicketRepository;
 import com.unihub.workshop.repository.WorkshopRepository;
+import com.unihub.workshop.service.notification.UserNotificationService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,17 +23,23 @@ public class WorkshopService {
 
     private final WorkshopRepository workshopRepository;
     private final TicketRepository ticketRepository;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final RefundLogRepository refundLogRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserNotificationService userNotificationService;
 
     public WorkshopService(WorkshopRepository workshopRepository,
                            TicketRepository ticketRepository,
+                           PaymentTransactionRepository paymentTransactionRepository,
                            RefundLogRepository refundLogRepository,
-                           ApplicationEventPublisher eventPublisher) {
+                           ApplicationEventPublisher eventPublisher,
+                           UserNotificationService userNotificationService) {
         this.workshopRepository = workshopRepository;
         this.ticketRepository = ticketRepository;
+        this.paymentTransactionRepository = paymentTransactionRepository;
         this.refundLogRepository = refundLogRepository;
         this.eventPublisher = eventPublisher;
+        this.userNotificationService = userNotificationService;
     }
 
     public List<Workshop> getAllWorkshops() {
@@ -74,15 +82,23 @@ public class WorkshopService {
         return workshopRepository.save(workshop);
     }
 
+    @Transactional
     public void deleteWorkshop(Long id) {
         Workshop workshop = workshopRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Workshop not found with id: " + id));
 
-        // Nếu đã có người mua vé thì không cho xóa cứng — phải đi đường cancel
-        long activeTickets = ticketRepository.countByWorkshopIdAndPaymentStatusIn(
-                id, List.of("PENDING", "PAID", "PAY_AT_COUNTER"));
-        if (activeTickets > 0) {
-            throw new RuntimeException("Workshop đã có " + activeTickets + " vé đang giữ chỗ. Vui lòng dùng chức năng \"Hủy workshop\" thay vì xóa.");
+        boolean isCancelled = Workshop.STATUS_CANCELLED.equalsIgnoreCase(workshop.getStatus());
+        if (!isCancelled && !hasWorkshopDatePassed(workshop)) {
+            throw new RuntimeException("Chỉ được xóa workshop đã tổ chức xong. Với workshop chưa tổ chức, vui lòng dùng chức năng \"Hủy workshop\" để chuyển sang CANCELLED và gửi thông báo cho sinh viên.");
+        }
+
+        List<Ticket> tickets = ticketRepository.findByWorkshopId(id);
+        List<Long> ticketIds = tickets.stream()
+                .map(Ticket::getId)
+                .toList();
+        if (!ticketIds.isEmpty()) {
+            paymentTransactionRepository.deleteByTicketIdIn(ticketIds);
+            ticketRepository.deleteAll(tickets);
         }
 
         workshopRepository.delete(workshop);
@@ -133,11 +149,15 @@ public class WorkshopService {
             }
 
             if (ticket.getUser() != null) {
+                String title = "Xác nhận hủy workshop \"" + workshop.getTitle() + "\"";
+                String message = buildCancellationMessage(workshop, previousStatus, safeReason);
+                userNotificationService.notifyUser(ticket.getUser(), title, message);
                 eventPublisher.publishEvent(new UserNotificationEvent(
                         this,
                         ticket.getUser(),
-                        "Workshop \"" + workshop.getTitle() + "\" đã bị hủy",
-                        buildCancellationMessage(workshop, previousStatus, safeReason)
+                        title,
+                        message,
+                        true
                 ));
             }
         }
@@ -152,7 +172,7 @@ public class WorkshopService {
 
     private String buildCancellationMessage(Workshop workshop, String previousStatus, String reason) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Sự kiện \"").append(workshop.getTitle()).append("\" đã bị hủy. ");
+        sb.append("Ban tổ chức xác nhận sự kiện \"").append(workshop.getTitle()).append("\" đã bị hủy. ");
         sb.append("Lý do: ").append(reason).append(". ");
         if ("PAID".equals(previousStatus)) {
             sb.append("Vé của bạn đã được ghi nhận để hoàn tiền, ban tổ chức sẽ liên hệ trong thời gian sớm nhất.");
@@ -160,5 +180,9 @@ public class WorkshopService {
             sb.append("Bạn không cần thực hiện thêm thao tác nào.");
         }
         return sb.toString();
+    }
+
+    private boolean hasWorkshopDatePassed(Workshop workshop) {
+        return workshop.getEventDate() != null && workshop.getEventDate().isBefore(LocalDateTime.now().toLocalDate());
     }
 }

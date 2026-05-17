@@ -75,6 +75,9 @@ const StudentHome = () => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const isCancelled = (workshop.status || '').toString().toUpperCase() === 'CANCELLED';
+
+    if (isCancelled) return false;
 
     if (workshop.eventDate < todayStr) return false;
 
