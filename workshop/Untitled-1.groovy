@@ -16,7 +16,7 @@ export const options = {
       stages: [
         // Bơm từ 0 lên 10.000 user từ từ trong 3 phút (Tránh sốc mạng)
         { duration: '1m', target: 12000 },
-        // Giữ vững mức 10.000 user trong 5 phút
+        // Giữ vững mức 10.000 user strong 5 phút
         { duration: '5m', target: 12000 },
         // Hạ nhiệt dần về 0 trong 1 phút
         { duration: '1m', target: 0 },
