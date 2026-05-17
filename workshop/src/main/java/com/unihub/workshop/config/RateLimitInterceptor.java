@@ -1,7 +1,10 @@
 package com.unihub.workshop.config;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -33,6 +36,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimitInterceptor.class);
 
     @Value("${app.rate-limit.enabled:true}")
     private boolean isEnabled;
@@ -72,6 +77,25 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         this.rateLimitScript = rateLimitScript;
     }
 
+    @PostConstruct
+    public void logSetup() {
+        log.info("[RateLimit] enabled={} mode={} redisAvailable={} maxIp={}/{}s maxUser={}/{}s",
+                isEnabled, storeMode,
+                redisTemplate != null && rateLimitScript != null,
+                maxRequests, windowSeconds,
+                maxRequestsPerUser, windowSecondsPerUser);
+
+        if (redisTemplate != null && !"memory".equalsIgnoreCase(storeMode)) {
+            try {
+                String pong = redisTemplate.getConnectionFactory().getConnection().ping();
+                log.info("[RateLimit] Redis ping = {} -> sẽ dùng Redis làm store chính.", pong);
+            } catch (RuntimeException ex) {
+                log.warn("[RateLimit] Redis ping thất bại tại startup: {}. Sẽ fallback in-memory cho tới khi reach được.",
+                        ex.getMessage());
+            }
+        }
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (!isEnabled) {
@@ -106,12 +130,21 @@ public class RateLimitInterceptor implements HandlerInterceptor {
                         String.valueOf(windowMillis),
                         String.valueOf(limit)
                 );
+                log.debug("[RateLimit] Redis check key={} -> allowed={}", key, allowed);
                 return allowed != null && allowed == 1L;
             } catch (RuntimeException ex) {
-                // Redis sập — đánh dấu để tạm thời dùng memory, log tối thiểu
+                // Redis sập — đánh dấu để tạm thời dùng memory
                 lastRedisFailureMillis = System.currentTimeMillis();
-                System.err.println("[RateLimit] Redis lỗi, fallback sang in-memory: " + ex.getMessage());
+                log.warn("[RateLimit] Redis lỗi ({}). Fallback in-memory trong {}ms.",
+                        ex.getMessage(), REDIS_FAILURE_BACKOFF_MS);
+                if ("redis".equalsIgnoreCase(storeMode)) {
+                    // Mode redis bắt buộc -> ném ra để dev biết ngay
+                    throw ex;
+                }
             }
+        } else {
+            log.debug("[RateLimit] Dùng in-memory cho key={} (mode={}, redisAvailable={})",
+                    key, storeMode, redisTemplate != null);
         }
         return allowInMemory(key, limit, windowMillis);
     }
