@@ -7,9 +7,10 @@ import { API_BASE_URL } from '../config/api';
 const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId }) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
+  const canShowQr = Boolean(paymentData?.qrUrl);
 
   useEffect(() => {
-    if (!isOpen || isSuccess || !paymentData?.memo) return;
+    if (!isOpen || isSuccess || !paymentData?.memo || !paymentData?.qrUrl) return;
 
     const interval = setInterval(async () => {
       try {
@@ -53,42 +54,53 @@ const CheckoutModal = ({ isOpen, onClose, workshopTitle, paymentData, workshopId
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-2 text-center">Quét mã thanh toán</h2>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2 text-center">
+                {canShowQr ? 'Quét mã thanh toán' : 'Đã giữ chỗ'}
+              </h2>
               
-              {/* Hiệu ứng chờ đợi */}
-              <div className="flex items-center justify-center gap-2 mb-6 text-blue-600">
-                <Loader2 className="animate-spin" size={18} />
-                <span className="text-sm font-semibold animate-pulse">Đang chờ tín hiệu từ ngân hàng...</span>
-              </div>
+              {canShowQr ? (
+                <div className="flex items-center justify-center gap-2 mb-6 text-blue-600">
+                  <Loader2 className="animate-spin" size={18} />
+                  <span className="text-sm font-semibold animate-pulse">Đang chờ tín hiệu từ ngân hàng...</span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center mb-6">
+                  Cổng thanh toán đang tạm thời gián đoạn. Bạn đã được đưa vào hàng đợi thanh toán sau.
+                </p>
+              )}
 
               {/* QR Code */}
-              <div className="flex flex-col items-center mb-6">
-                <div className="p-3 bg-white border-2 border-blue-100 rounded-2xl shadow-inner mb-4">
-                  <img src={paymentData.qrUrl} alt="Payment QR" className="w-52 h-52 object-contain" />
-                </div>
-                
-                <div className="w-full space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Nội dung</span>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(paymentData.memo);
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                      }}
-                      className="flex items-center gap-1.5 text-blue-600 font-bold"
-                    >
-                      <span className="font-mono">{paymentData.memo}</span>
-                      {copied ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
+              {canShowQr && (
+                <div className="flex flex-col items-center mb-6">
+                  <div className="p-3 bg-white border-2 border-blue-100 rounded-2xl shadow-inner mb-4">
+                    <img src={paymentData.qrUrl} alt="Payment QR" className="w-52 h-52 object-contain" />
+                  </div>
+                  
+                  <div className="w-full space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                      <span className="text-xs text-gray-400 font-bold uppercase">Nội dung</span>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(paymentData.memo);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="flex items-center gap-1.5 text-blue-600 font-bold"
+                      >
+                        <span className="font-mono">{paymentData.memo}</span>
+                        {copied ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 mb-8 flex gap-3">
                 <AlertCircle className="text-amber-500 shrink-0" size={18} />
                 <p className="text-[11px] text-amber-700 leading-tight">
-                  Vui lòng không đóng cửa sổ này. Sau khi bạn chuyển khoản thành công, hệ thống sẽ tự động chuyển trang.
+                  {canShowQr
+                    ? 'Vui lòng không đóng cửa sổ này. Sau khi bạn chuyển khoản thành công, hệ thống sẽ tự động chuyển trang.'
+                    : 'Khi cổng thanh toán hoạt động trở lại, vào mục Vé của tôi để tiếp tục thanh toán.'}
                 </p>
               </div>
 

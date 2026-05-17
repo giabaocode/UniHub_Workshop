@@ -208,7 +208,7 @@ public class TicketService {
         Map<String, Object> response = new HashMap<>();
         if (PaymentGatewayService.PAYMENT_GATEWAY_DOWN.equals(qrUrl)) {
             response.put("status", PaymentGatewayService.PAYMENT_GATEWAY_DOWN);
-            response.put("message", "Cổng thanh toán đang tạm thời gián đoạn. Chỗ của bạn vẫn được giữ, vui lòng thử thanh toán lại trong mục Vé của tôi sau.");
+            response.put("message", "Cổng thanh toán đang tạm thời gián đoạn. Bạn đã được đưa vào hàng đợi thanh toán sau; chỗ của bạn vẫn được giữ trong mục Vé của tôi.");
             response.put("ticketCode", ticketCode);
             response.put("amount", workshop.getPrice());
             return response;

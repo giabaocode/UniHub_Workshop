@@ -34,6 +34,9 @@ FRONTEND_URL=http://localhost:5173
 # Payment (SePay)
 SEPAY_ENABLED=true
 SEPAY_VALIDATE_URL=false
+SEPAY_REQUIRE_PUBLIC_WEBHOOK=true
+# Ví dụ khi bật ngrok: https://abc-123.ngrok-free.app/api/webhooks/sepay
+SEPAY_PUBLIC_WEBHOOK_URL=
 SEPAY_ACCOUNT=your-bank-account
 SEPAY_BANK=MBBank
 

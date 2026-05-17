@@ -1,21 +1,15 @@
-#!/bin/bash
-
-# =============================================================
-# Test rate limit cho /api/tickets/register (macOS / Linux)
-# =============================================================
 
 BASE_URL="http://localhost:8081"
 TEST_EMAIL="ratelimit_test@example.com"
 TEST_PWD="123456"
 TOTAL_REQUESTS=8
 
-# Màu sắc cho Terminal
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 MAGENTA='\033[0;35m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m' 
 
 TMP_RESP=$(mktemp)
 trap "rm -f $TMP_RESP" EXIT

@@ -6,6 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Locale;
+
 @Service
 public class PaymentGatewayService {
     public static final String PAYMENT_GATEWAY_DOWN = "PAYMENT_GATEWAY_DOWN";
@@ -21,6 +25,12 @@ public class PaymentGatewayService {
     @Value("${app.payment.sepay.enabled:true}")
     private boolean sepayEnabled;
 
+    @Value("${app.payment.sepay.require-public-webhook:true}")
+    private boolean requirePublicWebhook;
+
+    @Value("${app.payment.sepay.public-webhook-url:}")
+    private String publicWebhookUrl;
+
     @Value("${app.payment.sepay.validate-url:false}")
     private boolean validateUrl;
 
@@ -28,6 +38,10 @@ public class PaymentGatewayService {
     public String generatePaymentUrl(String ticketCode, Double price) {
         if (!sepayEnabled) {
             throw new IllegalStateException("Cổng thanh toán SePay đang bị tắt bằng cấu hình.");
+        }
+
+        if (requirePublicWebhook && !hasPublicWebhookUrl()) {
+            throw new IllegalStateException("Chưa cấu hình public webhook SePay. Hãy bật ngrok/HTTPS public URL trước khi hiển thị QR.");
         }
 
         String url = buildPaymentUrl(ticketCode, price);
@@ -52,5 +66,28 @@ public class PaymentGatewayService {
         System.err.println("Cảnh báo: Cổng thanh toán SePay đang sập hoặc quá tải. Lỗi: " + t.getMessage());
         System.err.println("Kích hoạt Fallback: Giữ vé ở trạng thái PENDING để thanh toán lại sau.");
         return PAYMENT_GATEWAY_DOWN;
+    }
+
+    private boolean hasPublicWebhookUrl() {
+        if (publicWebhookUrl == null || publicWebhookUrl.isBlank()) {
+            return false;
+        }
+
+        try {
+            URI uri = new URI(publicWebhookUrl.trim());
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || host == null) {
+                return false;
+            }
+
+            String normalizedHost = host.toLowerCase(Locale.ROOT);
+            return "https".equalsIgnoreCase(scheme)
+                    && !"localhost".equals(normalizedHost)
+                    && !"127.0.0.1".equals(normalizedHost)
+                    && !"0.0.0.0".equals(normalizedHost);
+        } catch (URISyntaxException e) {
+            return false;
+        }
     }
 }
