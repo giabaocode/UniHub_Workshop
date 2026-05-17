@@ -1,4 +1,4 @@
-const WORKSHOP_ID = 30; // Đổi ID này thành ID của workshop chỉ còn 1 chỗ trống
+const WORKSHOP_ID = 37; // Đổi ID này thành ID của workshop chỉ còn 1 chỗ trống
 const BASE_URL = 'http://localhost:8081/api';
 
 async function delay(ms) {
@@ -14,7 +14,7 @@ async function createAccountAndGetToken(index) {
             fullName: `User Race ${index}`,
             email: email,
             password: "password123",
-            studentId: `SE_TEST_${10000 + index}`
+            studentId: `SE_TEST_${Date.now().toString().slice(-6)}${index}`
         })
     });
     

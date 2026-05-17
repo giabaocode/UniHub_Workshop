@@ -50,9 +50,23 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/webhooks/**").permitAll()
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/workshops/**").permitAll() // Allow viewing workshops
+                    // Public read-only của workshop & seat-stream cho student
+                    .requestMatchers(HttpMethod.GET, "/api/workshops", "/api/workshops/**", "/api/workshops/seat-stream").permitAll()
+                    // Mutating workshop chỉ ADMIN
+                    .requestMatchers(HttpMethod.POST, "/api/workshops/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/api/workshops/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.DELETE, "/api/workshops/**").hasRole("ADMIN")
+                    // Stream notifications của admin: chỉ ADMIN mới được mở
+                    .requestMatchers("/api/notifications/stream").hasRole("ADMIN")
+                    // Các endpoint admin/staff về vé (batch-checkin, list attendees, manual checkin)
+                    .requestMatchers(HttpMethod.PUT, "/api/tickets/batch-checkin").hasAnyRole("ADMIN", "STAFF")
+                    .requestMatchers(HttpMethod.PUT, "/api/tickets/*/checkin").hasAnyRole("ADMIN", "STAFF")
+                    .requestMatchers(HttpMethod.GET, "/api/tickets/workshop/**").hasAnyRole("ADMIN", "STAFF")
+                    // AI admin endpoints
+                    .requestMatchers("/api/admin/ai/**").hasRole("ADMIN")
+                    // Mặc định các endpoint còn lại trong /api/tickets/** vẫn cần đăng nhập
                     .requestMatchers("/api/tickets/**").authenticated()
-                    .requestMatchers("/uploads/**").permitAll() // Đã gỡ bỏ dòng lặp thừa
+                    .requestMatchers("/uploads/**").permitAll()
                     .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
                 )
@@ -82,10 +96,7 @@ public class SecurityConfig {
         // Cho phép mọi nguồn (bao gồm cả IP LAN từ điện thoại và domain của Ngrok)
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        
-        // 🔥 ĐIỂM QUAN TRỌNG: Mở khóa TẤT CẢ các thẻ Header để thẻ Ngrok không bị chặn
-        configuration.setAllowedHeaders(List.of("*")); 
-        
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

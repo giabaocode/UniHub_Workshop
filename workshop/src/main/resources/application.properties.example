@@ -1,0 +1,58 @@
+# ==============================================================
+# UniHub Workshop — Backend Environment Variables (template)
+# Copy file thành .env (hoặc set env vars khi deploy) rồi điền giá trị thực tế.
+# KHÔNG commit secrets thật vào Git.
+# ==============================================================
+
+# Server
+SERVER_PORT=8081
+
+# Database (Neon / Postgres)
+DB_URL=jdbc:postgresql://your-host/your-db?sslmode=require
+DB_USERNAME=your_db_user
+DB_PASSWORD=your_db_password
+
+# JWT
+JWT_SECRET=replace-with-a-long-random-secret-256bit
+JWT_EXPIRATION_MS=86400000
+
+# OAuth — Google
+GOOGLE_CLIENT_ID=your-google-client-id
+
+# OAuth — GitHub
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+
+# Email (Gmail App Password)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-gmail-app-password
+MAIL_FROM=your-email@gmail.com
+FRONTEND_URL=http://localhost:5173
+
+# Payment (SePay)
+SEPAY_ENABLED=true
+SEPAY_VALIDATE_URL=false
+SEPAY_ACCOUNT=your-bank-account
+SEPAY_BANK=MBBank
+
+# Redis (Distributed rate limit + fairness queue)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_MAX_REQUESTS=5
+RATE_LIMIT_WINDOW_SECONDS=10
+RATE_LIMIT_USER_MAX_REQUESTS=3
+RATE_LIMIT_USER_WINDOW_SECONDS=10
+# auto = ưu tiên Redis, fallback memory; redis = chỉ Redis; memory = chỉ RAM
+RATE_LIMIT_STORE=auto
+
+# AI (Gemini) — chỉ backend, KHÔNG expose ra client
+GEMINI_ENABLED=true
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-1.5-flash-latest
+
+# Telegram (optional)
+TELEGRAM_NOTIFICATIONS_ENABLED=false
+TELEGRAM_BOT_TOKEN=

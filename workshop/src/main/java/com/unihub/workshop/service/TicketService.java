@@ -122,6 +122,10 @@ public class TicketService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Workshop với ID: " + workshopId));
 
+        if ("CANCELLED".equalsIgnoreCase(workshop.getStatus())) {
+            throw new RuntimeException("Sự kiện này đã bị ban tổ chức hủy.");
+        }
+
         if (workshop.getTotalSeats() == null || workshop.getTotalSeats() <= 0) {
             throw new RuntimeException("Rất tiếc, sự kiện này đã hết vé!");
         }

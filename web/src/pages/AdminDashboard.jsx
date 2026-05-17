@@ -1,21 +1,46 @@
-import Swal from 'sweetalert2';
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { LayoutDashboard, Ticket, DollarSign, Edit, Trash2, PlusCircle, MoreVertical, Eye, Loader2, Search, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
-import { workshopService } from '../services/workshopService';
+import Swal from "sweetalert2";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Ticket,
+  DollarSign,
+  Edit,
+  Trash2,
+  PlusCircle,
+  MoreVertical,
+  Eye,
+  Loader2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+} from "lucide-react";
+import { workshopService } from "../services/workshopService";
 
 const AdminDashboard = () => {
   const [workshops, setWorkshops] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // STATE CHO SEARCH VÀ PHÂN TRANG
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const itemsPerPage = 5;
 
   // --- MỚI: STATE QUẢN LÝ POPUP XÓA ---
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, name: '' });
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    id: null,
+    name: "",
+  });
+  const [cancelModal, setCancelModal] = useState({
+    isOpen: false,
+    id: null,
+    name: "",
+    reason: "",
+  });
   // -----------------------------------
 
   const fetchWorkshops = async () => {
@@ -45,9 +70,10 @@ const AdminDashboard = () => {
     setIsDeleting(true);
     try {
       await workshopService.deleteWorkshop(deleteModal.id);
-      setWorkshops(prev => prev.filter(ws => ws.id !== deleteModal.id));
-      if (currentWorkshops.length === 1 && currentPage > 1) setCurrentPage(prev => prev - 1);
-      setDeleteModal({ isOpen: false, id: null, name: '' });
+      setWorkshops((prev) => prev.filter((ws) => ws.id !== deleteModal.id));
+      if (currentWorkshops.length === 1 && currentPage > 1)
+        setCurrentPage((prev) => prev - 1);
+      setDeleteModal({ isOpen: false, id: null, name: "" });
     } catch (error) {
       Swal.fire("Lỗi khi xóa: " + (error.message || "Không xác định"));
     } finally {
@@ -55,15 +81,46 @@ const AdminDashboard = () => {
     }
   };
 
+  // CANCEL — soft cancel: gửi notification cho SV, log refund, giữ record
+  const handleCancelClick = (id, name) => {
+    setCancelModal({ isOpen: true, id, name, reason: "" });
+  };
+
+  const confirmCancel = async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+    try {
+      const updated = await workshopService.cancelWorkshop(
+        cancelModal.id,
+        cancelModal.reason,
+      );
+      setWorkshops((prev) =>
+        prev.map((ws) =>
+          ws.id === cancelModal.id ? { ...ws, ...updated } : ws,
+        ),
+      );
+      setCancelModal({ isOpen: false, id: null, name: "", reason: "" });
+      Swal.fire("Đã hủy workshop và gửi thông báo tới sinh viên đã đăng ký.");
+    } catch (error) {
+      Swal.fire("Lỗi khi hủy: " + (error.message || "Không xác định"));
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   // LOGIC SEARCH VÀ PHÂN TRANG
-  const filteredWorkshops = workshops.filter(ws =>
-    ws.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ws.room?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredWorkshops = workshops.filter(
+    (ws) =>
+      ws.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ws.room?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const totalPages = Math.ceil(filteredWorkshops.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentWorkshops = filteredWorkshops.slice(startIndex, startIndex + itemsPerPage);
+  const currentWorkshops = filteredWorkshops.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   useEffect(() => {
     setCurrentPage(1);
@@ -72,14 +129,19 @@ const AdminDashboard = () => {
   const stats = {
     total: workshops.length,
     tickets: workshops.reduce((acc, curr) => acc + (curr.bookedSpots || 0), 0),
-    revenue: workshops.reduce((acc, curr) => acc + ((curr.bookedSpots || 0) * (curr.price || 0)), 0)
+    revenue: workshops.reduce(
+      (acc, curr) => acc + (curr.bookedSpots || 0) * (curr.price || 0),
+      0,
+    ),
   };
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
         <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
-        <p className="text-gray-500 font-medium">Đang tải dữ liệu quản trị...</p>
+        <p className="text-gray-500 font-medium">
+          Đang tải dữ liệu quản trị...
+        </p>
       </div>
     );
   }
@@ -88,8 +150,12 @@ const AdminDashboard = () => {
     <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tổng quan Hệ thống</h1>
-          <p className="text-gray-500 text-sm mt-1">Theo dõi các chỉ số quan trọng của nền tảng UniHub</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Tổng quan Hệ thống
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Theo dõi các chỉ số quan trọng của nền tảng UniHub
+          </p>
         </div>
         <Link
           to="/admin/create"
@@ -101,14 +167,37 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard icon={<LayoutDashboard size={32} />} label="Tổng số Workshop" value={stats.total} color="blue" subValue="Toàn thời gian" />
-        <StatCard icon={<Ticket size={32} />} label="Tổng vé đã bán" value={stats.tickets.toLocaleString()} color="purple" subValue="Đã xác nhận" />
-        <StatCard icon={<DollarSign size={32} />} label="Doanh thu dự kiến" value={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.revenue)} color="green" subValue="Chưa trừ phí" />
+        <StatCard
+          icon={<LayoutDashboard size={32} />}
+          label="Tổng số Workshop"
+          value={stats.total}
+          color="blue"
+          subValue="Toàn thời gian"
+        />
+        <StatCard
+          icon={<Ticket size={32} />}
+          label="Tổng vé đã bán"
+          value={stats.tickets.toLocaleString()}
+          color="purple"
+          subValue="Đã xác nhận"
+        />
+        <StatCard
+          icon={<DollarSign size={32} />}
+          label="Doanh thu dự kiến"
+          value={new Intl.NumberFormat("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          }).format(stats.revenue)}
+          color="green"
+          subValue="Chưa trừ phí"
+        />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
-          <h2 className="text-lg font-bold text-gray-900">Danh sách Workshop</h2>
+          <h2 className="text-lg font-bold text-gray-900">
+            Danh sách Workshop
+          </h2>
           <div className="relative w-full sm:w-72">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="text-gray-400" size={18} />
@@ -138,12 +227,19 @@ const AdminDashboard = () => {
             <tbody className="divide-y divide-gray-100 text-sm">
               {currentWorkshops.length > 0 ? (
                 currentWorkshops.map((ws) => (
-                  // ĐỔI SANG DÙNG handleDeleteClick 
-                  <WorkshopRow key={ws.id} ws={ws} onDelete={handleDeleteClick} />
+                  // ĐỔI SANG DÙNG handleDeleteClick
+                  <WorkshopRow
+                    key={ws.id}
+                    ws={ws}
+                    onDelete={handleDeleteClick}
+                    onCancel={handleCancelClick}
+                  />
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-gray-500">Không tìm thấy workshop nào phù hợp.</td>
+                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                    Không tìm thấy workshop nào phù hợp.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -153,18 +249,30 @@ const AdminDashboard = () => {
         {totalPages > 1 && (
           <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
             <span className="text-sm text-gray-500">
-              Hiển thị <span className="font-bold text-gray-900">{startIndex + 1}</span> đến <span className="font-bold text-gray-900">{Math.min(startIndex + itemsPerPage, filteredWorkshops.length)}</span> trong số <span className="font-bold text-gray-900">{filteredWorkshops.length}</span> kết quả
+              Hiển thị{" "}
+              <span className="font-bold text-gray-900">{startIndex + 1}</span>{" "}
+              đến{" "}
+              <span className="font-bold text-gray-900">
+                {Math.min(startIndex + itemsPerPage, filteredWorkshops.length)}
+              </span>{" "}
+              trong số{" "}
+              <span className="font-bold text-gray-900">
+                {filteredWorkshops.length}
+              </span>{" "}
+              kết quả
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
                 className="w-9 h-9 rounded-lg flex items-center justify-center bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
               >
                 <ChevronLeft size={18} />
               </button>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
                 disabled={currentPage === totalPages}
                 className="w-9 h-9 rounded-lg flex items-center justify-center bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
               >
@@ -185,18 +293,26 @@ const AdminDashboard = () => {
               <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4 mx-auto shadow-inner">
                 <AlertTriangle size={32} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Cảnh báo xóa sự kiện</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Cảnh báo xóa sự kiện
+              </h3>
               <p className="text-gray-500 text-sm">
                 Bạn có chắc chắn muốn xóa vĩnh viễn sự kiện <br />
-                <span className="font-bold text-gray-900 mt-1 inline-block">"{deleteModal.name}"</span> không?
+                <span className="font-bold text-gray-900 mt-1 inline-block">
+                  "{deleteModal.name}"
+                </span>{" "}
+                không?
               </p>
               <div className="mt-4 bg-red-50 text-red-600 text-xs font-medium p-3 rounded-xl border border-red-100">
-                Lưu ý: Hành động này không thể hoàn tác và có thể ảnh hưởng đến các sinh viên đã mua vé.
+                Lưu ý: Hành động này không thể hoàn tác và có thể ảnh hưởng đến
+                các sinh viên đã mua vé.
               </div>
             </div>
             <div className="p-5 bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-gray-100">
               <button
-                onClick={() => setDeleteModal({ isOpen: false, id: null, name: '' })}
+                onClick={() =>
+                  setDeleteModal({ isOpen: false, id: null, name: "" })
+                }
                 className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition-all sm:w-auto w-full"
               >
                 Hủy bỏ
@@ -204,9 +320,79 @@ const AdminDashboard = () => {
               <button
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className={`px-6 py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl shadow-lg transition-all sm:w-auto w-full flex items-center justify-center gap-2 ${isDeleting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600 hover:-translate-y-0.5 shadow-red-500/30'}`}
+                className={`px-6 py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl shadow-lg transition-all sm:w-auto w-full flex items-center justify-center gap-2 ${isDeleting ? "opacity-70 cursor-not-allowed" : "hover:bg-red-600 hover:-translate-y-0.5 shadow-red-500/30"}`}
               >
-                {isDeleting ? <Loader2 className="animate-spin" size={18} /> : 'Xóa vĩnh viễn'}
+                {isDeleting ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  "Xóa vĩnh viễn"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ================================================= */}
+      {/* POPUP HỦY WORKSHOP — soft cancel + lý do, gửi notification     */}
+      {/* ================================================= */}
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform animate-in zoom-in-95 duration-200">
+            <div className="p-6 pt-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 mb-4 mx-auto shadow-inner">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Hủy sự kiện
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Bạn sắp hủy sự kiện <br />
+                <span className="font-bold text-gray-900 mt-1 inline-block">
+                  "{cancelModal.name}"
+                </span>
+              </p>
+              <textarea
+                rows={3}
+                value={cancelModal.reason}
+                onChange={(e) =>
+                  setCancelModal((prev) => ({
+                    ...prev,
+                    reason: e.target.value,
+                  }))
+                }
+                placeholder="Lý do hủy (sẽ gửi cho sinh viên)..."
+                className="mt-4 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-amber-100 focus:border-amber-500 outline-none transition-all bg-gray-50/50 focus:bg-white text-sm resize-none text-left"
+              />
+              <div className="mt-4 bg-amber-50 text-amber-700 text-xs font-medium p-3 rounded-xl border border-amber-100 text-left">
+                Mọi vé hợp lệ sẽ chuyển sang trạng thái CANCELLED. Sinh viên sẽ
+                nhận thông báo qua email + in-app. Vé đã thanh toán sẽ được ghi
+                refund log để bộ phận tài chính xử lý hoàn tiền.
+              </div>
+            </div>
+            <div className="p-5 bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-gray-100">
+              <button
+                onClick={() =>
+                  setCancelModal({
+                    isOpen: false,
+                    id: null,
+                    name: "",
+                    reason: "",
+                  })
+                }
+                className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition-all sm:w-auto w-full"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={confirmCancel}
+                disabled={isCancelling}
+                className={`px-6 py-2.5 text-sm font-bold text-white bg-amber-500 rounded-xl shadow-lg transition-all sm:w-auto w-full flex items-center justify-center gap-2 ${isCancelling ? "opacity-70 cursor-not-allowed" : "hover:bg-amber-600 hover:-translate-y-0.5 shadow-amber-500/30"}`}
+              >
+                {isCancelling ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  "Hủy sự kiện & gửi thông báo"
+                )}
               </button>
             </div>
           </div>
@@ -216,76 +402,124 @@ const AdminDashboard = () => {
   );
 };
 
-// ... Các Component con StatCard và WorkshopRow giữ nguyên như trước
-
 const StatCard = ({ icon, label, value, color, subValue }) => {
   const colors = {
     blue: "bg-blue-50 text-blue-600",
     purple: "bg-purple-50 text-purple-600",
-    green: "bg-green-50 text-green-600"
+    green: "bg-green-50 text-green-600",
   };
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-6 group hover:shadow-md transition-all">
-      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${colors[color]}`}>
+      <div
+        className={`w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${colors[color]}`}
+      >
         {icon}
       </div>
       <div>
         <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
         <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
-        <p className="text-[10px] text-green-500 font-bold mt-1 uppercase tracking-tight">{subValue}</p>
+        <p className="text-[10px] text-green-500 font-bold mt-1 uppercase tracking-tight">
+          {subValue}
+        </p>
       </div>
     </div>
   );
 };
 
-const WorkshopRow = ({ ws, onDelete }) => {
+const WorkshopRow = ({ ws, onDelete, onCancel }) => {
   const registered = ws.bookedSpots || 0;
-  const progress = ws.totalSeats > 0 ? Math.round((registered / ws.totalSeats) * 100) : 0;
+  const progress =
+    ws.totalSeats > 0 ? Math.round((registered / ws.totalSeats) * 100) : 0;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   const isPast = ws.eventDate < today;
+  const isCancelled =
+    (ws.status || "").toString().toUpperCase() === "CANCELLED";
 
   return (
     <tr className="hover:bg-blue-50/30 transition-colors">
       <td className="p-4 font-semibold text-gray-900 max-w-xs">
-        <Link to={`/admin/workshop/${ws.id}/attendees`} className="truncate block hover:text-blue-600 transition-colors" title={ws.title}>
+        <Link
+          to={`/admin/workshop/${ws.id}/attendees`}
+          className="truncate block hover:text-blue-600 transition-colors"
+          title={ws.title}
+        >
           {ws.title}
         </Link>
       </td>
       <td className="p-4 text-gray-600">
         <div className="flex flex-col">
-          <span className="font-medium text-gray-800">{ws.eventDate ? ws.eventDate.split('-').reverse().join('/') : '??'}</span>
-          <span className="text-xs text-gray-400 mt-0.5">{ws.startTime?.substring(0, 5) || '--:--'}</span>
+          <span className="font-medium text-gray-800">
+            {ws.eventDate ? ws.eventDate.split("-").reverse().join("/") : "??"}
+          </span>
+          <span className="text-xs text-gray-400 mt-0.5">
+            {ws.startTime?.substring(0, 5) || "--:--"}
+          </span>
         </div>
       </td>
       <td className="p-4 text-gray-600">{ws.room}</td>
       <td className="p-4">
         <div className="flex flex-col gap-1.5 w-32">
           <div className="flex items-center justify-between text-[10px] font-bold">
-            <span className="text-gray-700">{registered}/{ws.totalSeats}</span>
+            <span className="text-gray-700">
+              {registered}/{ws.totalSeats}
+            </span>
             <span className="text-blue-600">{progress}%</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-1.5">
-            <div className={`h-1.5 rounded-full ${progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${progress}%` }}></div>
+            <div
+              className={`h-1.5 rounded-full ${progress === 100 ? "bg-green-500" : "bg-blue-500"}`}
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
         </div>
       </td>
       <td className="p-4">
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isPast ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600 border border-blue-100'
-          }`}>
-          {isPast ? 'Đã kết thúc' : 'Sắp diễn ra'}
+        <span
+          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+            isCancelled
+              ? "bg-red-50 text-red-600 border border-red-100"
+              : isPast
+                ? "bg-gray-100 text-gray-500"
+                : "bg-blue-50 text-blue-600 border border-blue-100"
+          }`}
+        >
+          {isCancelled ? "Đã hủy" : isPast ? "Đã kết thúc" : "Sắp diễn ra"}
         </span>
       </td>
       <td className="p-4">
         <div className="flex items-center justify-end gap-1">
-          <Link to={`/admin/workshop/${ws.id}/attendees`} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Danh sách">
+          <Link
+            to={`/admin/workshop/${ws.id}/attendees`}
+            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            title="Danh sách"
+          >
             <Eye size={18} />
           </Link>
-          <Link to={`/admin/edit/${ws.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Sửa">
-            <Edit size={18} />
-          </Link>
-          {/* NÚT XÓA Ở ĐÂY SẼ GỌI HAM HANDLE_DELETE_CLICK (MỞ POPUP) */}
-          <button onClick={() => onDelete(ws.id, ws.title)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Xóa">
+          {!isCancelled && (
+            <Link
+              to={`/admin/edit/${ws.id}`}
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Sửa"
+            >
+              <Edit size={18} />
+            </Link>
+          )}
+          {!isCancelled && !isPast && (
+            <button
+              onClick={() => onCancel(ws.id, ws.title)}
+              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+              title="Hủy sự kiện (gửi thông báo cho sinh viên)"
+            >
+              <AlertTriangle size={18} />
+            </button>
+          )}
+          {/* Xóa cứng — chỉ chạy được khi chưa có vé. Backend sẽ chặn nếu có vé. */}
+          <button
+            onClick={() => onDelete(ws.id, ws.title)}
+            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Xóa"
+          >
             <Trash2 size={18} />
           </button>
         </div>

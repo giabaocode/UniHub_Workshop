@@ -1,18 +1,29 @@
-import Swal from 'sweetalert2';
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, Sparkles, CheckCircle2, Users, RefreshCw, FileText, Loader2 } from 'lucide-react';
-import CheckoutModal from '../components/CheckoutModal';
-import CountdownTimer from '../components/CountdownTimer';
-import geminiService from '../services/gemini.service';
-import { workshopService } from '../services/workshopService';
-import { useParams, useNavigate } from 'react-router-dom'; // Thêm useNavigate
-import ticketService from '../services/ticket.service';
+import Swal from "sweetalert2";
+import React, { useState, useEffect } from "react";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Sparkles,
+  CheckCircle2,
+  Users,
+  RefreshCw,
+  FileText,
+  Loader2,
+} from "lucide-react";
+import CheckoutModal from "../components/CheckoutModal";
+import CountdownTimer from "../components/CountdownTimer";
+import geminiService from "../services/gemini.service";
+import { workshopService } from "../services/workshopService";
+import { useParams, useNavigate } from "react-router-dom"; // Thêm useNavigate
+import ticketService from "../services/ticket.service";
 
 const WorkshopDetail = () => {
   const { id } = useParams();
   const [workshop, setWorkshop] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const [loadError, setLoadError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
@@ -20,10 +31,10 @@ const WorkshopDetail = () => {
   const navigate = useNavigate();
 
   // AI Summary state
-  const [aiSummary, setAiSummary] = useState('');
+  const [aiSummary, setAiSummary] = useState("");
   const [aiHashtags, setAiHashtags] = useState([]);
   const [aiLoading, setAiLoading] = useState(true);
-  const [aiError, setAiError] = useState('');
+  const [aiError, setAiError] = useState("");
   const [paymentData, setPaymentData] = useState(null);
 
   // Fetch workshop data from API
@@ -35,26 +46,48 @@ const WorkshopDetail = () => {
         setWorkshop(data);
 
         // Kiểm tra vé
-        const user = JSON.parse(localStorage.getItem('user'));
+        const user = JSON.parse(localStorage.getItem("user"));
         if (user && user.token) {
           const check = await ticketService.checkRegistration(id);
           setIsRegistered(Boolean(check.isRegistered));
           setRegistrationStatus(check.paymentStatus || null);
         }
 
-        // Logic AI giữ nguyên...
+        // Logic AI: nếu workshop đã có aiSummary trong DB thì parse hiển thị.
+        // Nếu thiếu, KHÔNG còn gọi Gemini ở client (tránh lộ key + abuse).
+        // FE chỉ thử fetch AI khi user là ADMIN — phù hợp với endpoint backend
+        // /api/admin/ai/* đã được @PreAuthorize hasRole('ADMIN').
         if (data.aiSummary) {
-          const summaryMatch = data.aiSummary.match(/\[SUMMARY\]([\s\S]*?)\[HASHTAGS\]/i);
+          const summaryMatch = data.aiSummary.match(
+            /\[SUMMARY\]([\s\S]*?)\[HASHTAGS\]/i,
+          );
           const tagsMatch = data.aiSummary.match(/\[HASHTAGS\]([\s\S]*)/i);
           if (summaryMatch) setAiSummary(summaryMatch[1].trim());
           else setAiSummary(data.aiSummary);
-          if (tagsMatch) setAiHashtags(tagsMatch[1].trim().split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean));
+          if (tagsMatch)
+            setAiHashtags(
+              tagsMatch[1]
+                .trim()
+                .split(",")
+                .map((t) => t.trim().replace(/^#/, ""))
+                .filter(Boolean),
+            );
           setAiLoading(false);
-        } else {
+        } else if (
+          user &&
+          (user.role || "")
+            .trim()
+            .toUpperCase()
+            .replace(/^ROLE_/, "") === "ADMIN"
+        ) {
           fetchAiSummary(data);
+        } else {
+          setAiSummary("Bản tóm tắt AI sẽ được cập nhật bởi ban tổ chức.");
+          setAiHashtags([]);
+          setAiLoading(false);
         }
       } catch (err) {
-        setLoadError('Không thể tải thông tin workshop.');
+        setLoadError("Không thể tải thông tin workshop.");
         setAiLoading(false);
       } finally {
         setIsLoading(false);
@@ -70,25 +103,27 @@ const WorkshopDetail = () => {
           return;
         }
 
-        setWorkshop((current) => current
-          ? {
-              ...current,
-              totalSeats: seatUpdate.totalSeats,
-              bookedSpots: seatUpdate.bookedSpots,
-            }
-          : current
+        setWorkshop((current) =>
+          current
+            ? {
+                ...current,
+                totalSeats: seatUpdate.totalSeats,
+                bookedSpots: seatUpdate.bookedSpots,
+              }
+            : current,
         );
       },
       onRefresh: async () => {
         try {
           const latestWorkshop = await workshopService.getWorkshopById(id);
-          setWorkshop((current) => current
-            ? {
-                ...current,
-                totalSeats: latestWorkshop.totalSeats,
-                bookedSpots: latestWorkshop.bookedSpots,
-              }
-            : latestWorkshop
+          setWorkshop((current) =>
+            current
+              ? {
+                  ...current,
+                  totalSeats: latestWorkshop.totalSeats,
+                  bookedSpots: latestWorkshop.bookedSpots,
+                }
+              : latestWorkshop,
           );
         } catch (error) {
           console.error("Lỗi khi đồng bộ số ghế workshop:", error);
@@ -105,32 +140,32 @@ const WorkshopDetail = () => {
     if (!workshopData) return;
 
     setAiLoading(true);
-    setAiError('');
+    setAiError("");
     try {
       const result = await geminiService.summarizeWorkshop({
         title: workshopData.title,
-        description: workshopData.description || '',
+        description: workshopData.description || "",
         agenda: [],
       });
       setAiSummary(result.summary);
       setAiHashtags(result.hashtags || []);
     } catch (err) {
-      setAiError('Không thể tải AI Summary. ' + (err.message || ''));
+      setAiError("Không thể tải AI Summary. " + (err.message || ""));
     } finally {
       setAiLoading(false);
     }
   };
 
   const handleRegisterClick = async () => {
-    if (isRegistered && registrationStatus !== 'PENDING') {
-      navigate('/my-tickets');
+    if (isRegistered && registrationStatus !== "PENDING") {
+      navigate("/my-tickets");
       return;
     }
 
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem("user"));
     if (!user || !user.token) {
       Swal.fire("Vui lòng đăng nhập để đăng ký!");
-      navigate('/login');
+      navigate("/login");
       return;
     }
     setIsWaiting(true);
@@ -138,43 +173,57 @@ const WorkshopDetail = () => {
       const result = await ticketService.registerWorkshop(id);
       const confirmed = await ticketService.checkRegistration(id);
 
-      if (!confirmed.isRegistered || (result.ticketCode && confirmed.ticketCode !== result.ticketCode)) {
+      if (
+        !confirmed.isRegistered ||
+        (result.ticketCode && confirmed.ticketCode !== result.ticketCode)
+      ) {
         setIsRegistered(false);
         setRegistrationStatus(null);
         setPaymentData(null);
-        Swal.fire('Đăng ký chưa được ghi nhận do sự kiện vừa hết chỗ. Vui lòng tải lại trang.');
+        Swal.fire(
+          "Đăng ký chưa được ghi nhận do sự kiện vừa hết chỗ. Vui lòng tải lại trang.",
+        );
         return;
       }
 
-      if (result.status === 'FREE_SUCCESS') {
-        Swal.fire('Đăng ký thành công! Vé đã được gửi tới email của bạn.');
+      if (result.status === "FREE_SUCCESS") {
+        Swal.fire("Đăng ký thành công! Vé đã được gửi tới email của bạn.");
         setIsRegistered(true);
-        setRegistrationStatus(confirmed.paymentStatus || 'PAID');
-        navigate('/my-tickets');
-      } else if (result.status === 'PAY_AT_COUNTER') {
+        setRegistrationStatus(confirmed.paymentStatus || "PAID");
+        navigate("/my-tickets");
+      } else if (result.status === "PAY_AT_COUNTER") {
         setIsRegistered(true);
-        setRegistrationStatus(confirmed.paymentStatus || 'PAY_AT_COUNTER');
-        Swal.fire(result.message || 'Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!');
-        navigate('/my-tickets');
-      } else if (result.status === 'PAYMENT_GATEWAY_DOWN') {
+        setRegistrationStatus(confirmed.paymentStatus || "PAY_AT_COUNTER");
+        Swal.fire(
+          result.message ||
+            "Hệ thống thanh toán bảo trì. Bạn đã được giữ chỗ, vui lòng thanh toán tại quầy!",
+        );
+        navigate("/my-tickets");
+      } else if (result.status === "PAYMENT_GATEWAY_DOWN") {
         setIsRegistered(true);
-        setRegistrationStatus(confirmed.paymentStatus || 'PENDING');
+        setRegistrationStatus(confirmed.paymentStatus || "PENDING");
         setPaymentData(null);
         setIsModalOpen(false);
-        Swal.fire(result.message || 'Cổng thanh toán đang tạm thời gián đoạn. Bạn đã được giữ chỗ, vui lòng vào Vé của tôi để thanh toán lại sau.');
-        navigate('/my-tickets');
-      } else if (result.status === 'REQUIRE_PAYMENT') {
+        Swal.fire(
+          result.message ||
+            "Cổng thanh toán đang tạm thời gián đoạn. Bạn đã được giữ chỗ, vui lòng vào Vé của tôi để thanh toán lại sau.",
+        );
+        navigate("/my-tickets");
+      } else if (result.status === "REQUIRE_PAYMENT") {
         setIsRegistered(true);
-        setRegistrationStatus(confirmed.paymentStatus || 'PENDING');
+        setRegistrationStatus(confirmed.paymentStatus || "PENDING");
         setPaymentData(result);
         setIsModalOpen(true);
       }
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
-      const errorMsg = error.response?.data?.error || error.message || "Đã có lỗi xảy ra, vui lòng thử lại!";
+      const errorMsg =
+        error.response?.data?.error ||
+        error.message ||
+        "Đã có lỗi xảy ra, vui lòng thử lại!";
       Swal.fire(errorMsg);
-      if (error.message.includes('đăng nhập')) {
-        navigate('/login');
+      if (error.message.includes("đăng nhập")) {
+        navigate("/login");
       }
     } finally {
       setIsWaiting(false);
@@ -197,7 +246,9 @@ const WorkshopDetail = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 font-medium text-lg">{loadError || 'Không tìm thấy workshop.'}</p>
+          <p className="text-red-500 font-medium text-lg">
+            {loadError || "Không tìm thấy workshop."}
+          </p>
         </div>
       </div>
     );
@@ -207,34 +258,41 @@ const WorkshopDetail = () => {
     ? new Date().getTime() > new Date(workshop.registrationDeadline).getTime()
     : false;
 
-  const isPendingPayment = isRegistered && registrationStatus === 'PENDING';
+  const isCancelled =
+    (workshop.status || "").toString().toUpperCase() === "CANCELLED";
+
+  const isPendingPayment = isRegistered && registrationStatus === "PENDING";
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '---';
+    if (!dateStr) return "---";
     const d = new Date(dateStr);
-    return d.toLocaleDateString('vi-VN');
+    return d.toLocaleDateString("vi-VN");
   };
 
   const formatPrice = (price) => {
-    if (!price || price === 0) return 'Miễn phí';
-    return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ';
+    if (!price || price === 0) return "Miễn phí";
+    return new Intl.NumberFormat("vi-VN").format(price) + " VNĐ";
   };
 
   // Dịch các định dạng danh sách, tiêu đề, xuống dòng
   const renderFormattedText = (text) => {
-    if (!text) return 'Chưa có thông tin.';
+    if (!text) return "Chưa có thông tin.";
 
-    const lines = text.split('\n');
+    const lines = text.split("\n");
     return lines.map((line, index) => {
       // Xử lý tiêu đề (### Heading) -> Chữ to, in đậm, màu xanh
       if (line.match(/^#{1,3}\s+/)) {
-        const content = line.replace(/^#{1,3}\s+/, '');
-        return <h4 key={index} className="text-xl font-bold text-blue-700 mt-5 mb-2">{content}</h4>;
+        const content = line.replace(/^#{1,3}\s+/, "");
+        return (
+          <h4 key={index} className="text-xl font-bold text-blue-700 mt-5 mb-2">
+            {content}
+          </h4>
+        );
       }
 
       // Xử lý Bullet point (- item hoặc * item) -> Thêm dấu chấm xanh
       if (line.match(/^[-*]\s+/)) {
-        const content = line.replace(/^[-*]\s+/, '');
+        const content = line.replace(/^[-*]\s+/, "");
         return (
           <div key={index} className="flex items-start gap-2 mb-2 ml-2">
             <span className="text-blue-500 mt-0.5 font-bold">•</span>
@@ -244,10 +302,14 @@ const WorkshopDetail = () => {
       }
 
       // Dòng trống
-      if (line.trim() === '') return <div key={index} className="h-2"></div>;
+      if (line.trim() === "") return <div key={index} className="h-2"></div>;
 
       // Đoạn văn bình thường
-      return <p key={index} className="text-gray-600 leading-relaxed mb-2">{formatBoldText(line)}</p>;
+      return (
+        <p key={index} className="text-gray-600 leading-relaxed mb-2">
+          {formatBoldText(line)}
+        </p>
+      );
     });
   };
 
@@ -255,9 +317,12 @@ const WorkshopDetail = () => {
   const formatBoldText = (text) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+      if (part.startsWith("**") && part.endsWith("**")) {
         return (
-          <strong key={i} className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded">
+          <strong
+            key={i}
+            className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded"
+          >
             {part.slice(2, -2)}
           </strong>
         );
@@ -269,21 +334,42 @@ const WorkshopDetail = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {isCancelled && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-5 py-4 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <span className="text-2xl">!</span>
+            </div>
+            <div>
+              <p className="font-bold text-base">Sự kiện đã bị hủy</p>
+              <p className="text-sm mt-1 leading-relaxed">
+                {workshop.cancellationReason ||
+                  "Ban tổ chức đã hủy sự kiện này."}{" "}
+                Nếu bạn đã thanh toán, ban tổ chức sẽ liên hệ để hoàn tiền.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Cột trái: Thông tin chính */}
           <div className="lg:w-2/3 space-y-8">
             <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
               <div className="h-64 md:h-96 relative">
                 <img
-                  src={workshop.coverImageUrl || 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'}
+                  src={
+                    workshop.coverImageUrl ||
+                    "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                  }
                   alt="Workshop cover"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-4 right-4">
-                  <span className={`px-4 py-1.5 font-bold rounded-full shadow-sm border ${workshop.price > 0
-                      ? 'bg-blue-100 text-blue-700 border-blue-200'
-                      : 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                    }`}>
+                  <span
+                    className={`px-4 py-1.5 font-bold rounded-full shadow-sm border ${
+                      workshop.price > 0
+                        ? "bg-blue-100 text-blue-700 border-blue-200"
+                        : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                    }`}
+                  >
                     {formatPrice(workshop.price)}
                   </span>
                 </div>
@@ -300,8 +386,12 @@ const WorkshopDetail = () => {
                       <User size={20} />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400 font-medium">Diễn giả</p>
-                      <p className="font-semibold text-gray-900">{workshop.speaker || '---'}</p>
+                      <p className="text-sm text-gray-400 font-medium">
+                        Diễn giả
+                      </p>
+                      <p className="font-semibold text-gray-900">
+                        {workshop.speaker || "---"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -309,8 +399,12 @@ const WorkshopDetail = () => {
                       <Calendar size={20} />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400 font-medium">Ngày tổ chức</p>
-                      <p className="font-semibold text-gray-900">{formatDate(workshop.eventDate)}</p>
+                      <p className="text-sm text-gray-400 font-medium">
+                        Ngày tổ chức
+                      </p>
+                      <p className="font-semibold text-gray-900">
+                        {formatDate(workshop.eventDate)}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -318,14 +412,20 @@ const WorkshopDetail = () => {
                       <Clock size={20} />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400 font-medium">Thời gian</p>
-                      <p className="font-semibold text-gray-900">{workshop.startTime || '---'}</p>
+                      <p className="text-sm text-gray-400 font-medium">
+                        Thời gian
+                      </p>
+                      <p className="font-semibold text-gray-900">
+                        {workshop.startTime || "---"}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-6">
-                  <h3 className="text-2xl font-bold text-gray-900">Nội dung chương trình</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Nội dung chương trình
+                  </h3>
                   <div className="text-lg">
                     {renderFormattedText(workshop.description)}
                   </div>
@@ -347,14 +447,47 @@ const WorkshopDetail = () => {
                 )}
 
                 <div className="mt-10">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Sơ đồ phòng</h3>
-                  <div className="bg-gray-100 rounded-2xl h-64 flex items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden group cursor-pointer">
-                    <div className="text-center group-hover:scale-105 transition-transform">
-                      <MapPin size={48} className="mx-auto text-blue-400 mb-3" />
-                      <p className="font-semibold text-gray-600">{workshop.room || 'Chưa xác định'}</p>
-                      <p className="text-sm text-gray-400">Click để xem bản đồ chi tiết</p>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    Sơ đồ phòng
+                  </h3>
+                  {workshop.roomMapUrl ? (
+                    <a
+                      href={workshop.roomMapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
+                    >
+                      <img
+                        src={workshop.roomMapUrl}
+                        alt={`Sơ đồ phòng ${workshop.room || ""}`}
+                        className="w-full h-auto object-contain bg-gray-50"
+                      />
+                      <div className="px-4 py-3 bg-white flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin size={16} className="text-blue-500" />
+                        <span className="font-semibold text-gray-900">
+                          {workshop.room || "Chưa xác định"}
+                        </span>
+                        <span className="ml-auto text-xs text-blue-500 font-medium">
+                          Bấm để mở ảnh full
+                        </span>
+                      </div>
+                    </a>
+                  ) : (
+                    <div className="bg-gray-100 rounded-2xl h-64 flex items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden">
+                      <div className="text-center">
+                        <MapPin
+                          size={48}
+                          className="mx-auto text-blue-400 mb-3"
+                        />
+                        <p className="font-semibold text-gray-600">
+                          {workshop.room || "Chưa xác định"}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          Ban tổ chức chưa đăng tải sơ đồ phòng.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -369,7 +502,10 @@ const WorkshopDetail = () => {
               <div className="relative bg-white rounded-2xl p-6 shadow-xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="text-purple-500 animate-pulse" size={24} />
+                    <Sparkles
+                      className="text-purple-500 animate-pulse"
+                      size={24}
+                    />
                     <h3 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
                       AI Summary
                     </h3>
@@ -381,7 +517,10 @@ const WorkshopDetail = () => {
                       title="Tạo lại"
                       className="text-gray-400 hover:text-purple-500 transition-colors disabled:opacity-40"
                     >
-                      <RefreshCw size={16} className={aiLoading ? 'animate-spin' : ''} />
+                      <RefreshCw
+                        size={16}
+                        className={aiLoading ? "animate-spin" : ""}
+                      />
                     </button>
                   )}
                 </div>
@@ -410,7 +549,9 @@ const WorkshopDetail = () => {
                 ) : (
                   <>
                     <div className="text-gray-600 text-sm leading-relaxed mb-4">
-                      <span className="mb-2 block">🤖 <strong>AI Tóm tắt:</strong></span>
+                      <span className="mb-2 block">
+                        🤖 <strong>AI Tóm tắt:</strong>
+                      </span>
                       <div className="bg-white/50 rounded-lg p-2 border border-purple-50">
                         {renderFormattedText(aiSummary)}
                       </div>
@@ -422,7 +563,7 @@ const WorkshopDetail = () => {
                             key={idx}
                             className="px-2 py-1 bg-purple-50 text-purple-600 text-xs font-semibold rounded-md"
                           >
-                            #{tag.replace(/^#/, '')}
+                            #{tag.replace(/^#/, "")}
                           </span>
                         ))}
                       </div>
@@ -444,55 +585,79 @@ const WorkshopDetail = () => {
                 </div>
               )}
 
-
-
-              <h3 className="text-xl font-bold text-gray-900 mb-2 border-t border-gray-100 pt-6">Thông tin đăng ký</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 border-t border-gray-100 pt-6">
+                Thông tin đăng ký
+              </h3>
               <div className="flex justify-between items-end py-4 border-b border-gray-100 mb-6">
                 <div>
                   <p className="text-sm text-gray-500 font-medium">Giá vé</p>
-                  <p className="text-3xl font-extrabold text-gray-900">{formatPrice(workshop.price)}</p>
+                  <p className="text-3xl font-extrabold text-gray-900">
+                    {formatPrice(workshop.price)}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500 font-medium">Còn lại</p>
-                  <p className={`text-lg font-bold ${
-                    (workshop.totalSeats - (workshop.bookedSpots || 0)) <= 0 ? 'text-red-500' :
-                    (workshop.totalSeats - (workshop.bookedSpots || 0)) <= 10 ? 'text-amber-500' :
-                    'text-blue-600'
-                  }`}>
-                    {Math.max(0, (workshop.totalSeats || 0) - (workshop.bookedSpots || 0))} / {workshop.totalSeats || 0} chỗ
+                  <p
+                    className={`text-lg font-bold ${
+                      workshop.totalSeats - (workshop.bookedSpots || 0) <= 0
+                        ? "text-red-500"
+                        : workshop.totalSeats - (workshop.bookedSpots || 0) <=
+                            10
+                          ? "text-amber-500"
+                          : "text-blue-600"
+                    }`}
+                  >
+                    {Math.max(
+                      0,
+                      (workshop.totalSeats || 0) - (workshop.bookedSpots || 0),
+                    )}{" "}
+                    / {workshop.totalSeats || 0} chỗ
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={handleRegisterClick}
-                disabled={isWaiting || (!isPendingPayment && isRegistrationExpired) || (workshop.bookedSpots >= workshop.totalSeats && !isRegistered)}
+                disabled={
+                  isWaiting ||
+                  isCancelled ||
+                  (!isPendingPayment && isRegistrationExpired) ||
+                  (workshop.bookedSpots >= workshop.totalSeats && !isRegistered)
+                }
                 className={`w-full text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform flex items-center justify-center gap-2 ${
                   isWaiting
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : isPendingPayment
-                      ? 'bg-amber-500 hover:bg-amber-600 cursor-pointer'
-                      : isRegistered
-                        ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
-                      : isRegistrationExpired
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : (workshop.bookedSpots >= workshop.totalSeats)
-                          ? 'bg-red-400 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-1'
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : isCancelled
+                      ? "bg-red-400 cursor-not-allowed"
+                      : isPendingPayment
+                        ? "bg-amber-500 hover:bg-amber-600 cursor-pointer"
+                        : isRegistered
+                          ? "bg-green-600 hover:bg-green-700 cursor-pointer"
+                          : isRegistrationExpired
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : workshop.bookedSpots >= workshop.totalSeats
+                              ? "bg-red-400 cursor-not-allowed"
+                              : "bg-blue-600 hover:bg-blue-700 hover:-translate-y-1"
                 }`}
               >
                 {isWaiting ? (
-                  <><Loader2 size={24} className="animate-spin" /> Đang xử lý...</>
+                  <>
+                    <Loader2 size={24} className="animate-spin" /> Đang xử lý...
+                  </>
+                ) : isCancelled ? (
+                  "Sự kiện đã bị hủy"
                 ) : isPendingPayment ? (
-                  'Tiếp tục thanh toán'
+                  "Tiếp tục thanh toán"
                 ) : isRegistered ? (
-                  <><CheckCircle2 size={24} /> Đã đăng ký — Xem vé</>
+                  <>
+                    <CheckCircle2 size={24} /> Đã đăng ký — Xem vé
+                  </>
                 ) : isRegistrationExpired ? (
-                  'Hết thời hạn đăng ký'
-                ) : (workshop.bookedSpots >= workshop.totalSeats) ? (
-                  'Đã hết chỗ'
+                  "Hết thời hạn đăng ký"
+                ) : workshop.bookedSpots >= workshop.totalSeats ? (
+                  "Đã hết chỗ"
                 ) : (
-                  'Đăng ký ngay'
+                  "Đăng ký ngay"
                 )}
               </button>
             </div>
@@ -520,21 +685,27 @@ const WorkshopDetail = () => {
                 <Users size={24} className="text-blue-600" />
               </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Đang xếp hàng...</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Đang xếp hàng...
+            </h3>
             <p className="text-gray-500 text-center text-sm mb-6">
-              Hệ thống đang xử lý lượng lớn yêu cầu đăng ký. Vui lòng không làm mới trang (F5).
+              Hệ thống đang xử lý lượng lớn yêu cầu đăng ký. Vui lòng không làm
+              mới trang (F5).
             </p>
             <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden relative">
               <div className="bg-blue-600 h-1.5 rounded-full absolute top-0 left-0 animate-[progress_2.5s_ease-in-out_forwards]"></div>
             </div>
-            <style dangerouslySetInnerHTML={{
-              __html: `
+            <style
+              dangerouslySetInnerHTML={{
+                __html: `
               @keyframes progress {
                 0% { width: 0%; }
                 50% { width: 70%; }
                 100% { width: 100%; }
               }
-            `}} />
+            `,
+              }}
+            />
           </div>
         </div>
       )}

@@ -3,7 +3,19 @@ workshop/target/
 .idea/
 .vscode/
 .env
+.env.local
+.env.*.local
 *.log
 
+# Local env files / sensitive bundles
+students.csv
+workshop/application-local.properties
+workshop/application-prod.properties
+workshop/src/main/resources/application-local.properties
+workshop/src/main/resources/application-prod.properties
+
+# Avoid committing accidentally generated local-only artefacts
+bundle_for_gemini.js
+gemini_updates.txt
 
 # .\mvnw spring-boot:run

@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -56,6 +57,7 @@ public class TicketController {
             case "PAID" -> "Đã xác nhận";
             case "PAY_AT_COUNTER" -> "Thanh toán tại quầy";
             case "PENDING" -> "Chờ thanh toán";
+            case "CANCELLED" -> "Sự kiện đã hủy";
             default -> "Chưa xác nhận";
         };
     }
@@ -97,7 +99,7 @@ public class TicketController {
                 }
 
                 Map<String, Object> map = new HashMap<>();
-                boolean checkInAllowed = canCheckIn(ticket);
+                boolean checkInAllowed = canCheckIn(ticket) && !"CANCELLED".equalsIgnoreCase(ws.getStatus());
 
                 map.put("workshopId", ws.getId());
                 map.put("id", ticket.getTicketCode());
@@ -106,15 +108,15 @@ public class TicketController {
                 map.put("room", ws.getRoom());
                 map.put("date", ws.getEventDate() != null ? ws.getEventDate().format(dateFormatter) : "---");
                 map.put("time", ws.getStartTime() != null ? ws.getStartTime().format(timeFormatter) : "---");
-                map.put("status", getTicketStatusLabel(ticket));
+                map.put("status", "CANCELLED".equalsIgnoreCase(ws.getStatus()) ? "Sự kiện đã hủy" : getTicketStatusLabel(ticket));
                 map.put("paymentStatus", ticket.getPaymentStatus());
+                map.put("workshopStatus", ws.getStatus());
                 map.put("canCheckIn", checkInAllowed);
                 map.put("qrValue", checkInAllowed ? ticket.getTicketCode() : null);
 
                 ticketList.add(map);
             } catch (RuntimeException error) {
                 System.err.println("Bỏ qua ticket lỗi khi tải Vé của tôi: " + ticket.getId() + " - " + error.getMessage());
-                continue;
             }
         }
 
@@ -129,33 +131,25 @@ public class TicketController {
     @PostMapping("/register/{workshopId}")
     public ResponseEntity<Map<String, Object>> registerWorkshop(@PathVariable Long workshopId) {
         try {
-            // Gọi service và nhận về Map chứa status, qrUrl, memo...
             Map<String, Object> result = ticketService.registerWorkshop(workshopId);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
-            // Trả về lỗi dưới dạng JSON để Frontend dễ xử lý
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     // ==========================================================
-    // CÁC API DÀNH CHO ADMIN (QUẢN LÝ DANH SÁCH & CHECK-IN)
+    // CÁC API DÀNH CHO ADMIN/STAFF (Có @PreAuthorize ở method
+    // và double-check ở SecurityConfig URL filter)
     // ==========================================================
 
-    // 1. Lấy danh sách người tham dự của một Workshop
     @GetMapping("/workshop/{workshopId}")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<?> getAttendeesByWorkshop(@PathVariable Long workshopId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean hasPermission = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
-        if (!hasPermission) {
-            return ResponseEntity.status(403).body("Bạn không có quyền truy cập danh sách này!");
-        }
         List<Ticket> tickets = ticketRepository.findByWorkshopIdAndPaymentStatusIn(workshopId, CHECK_IN_PAYMENT_STATUSES);
-        
-        // Map dữ liệu Ticket ra định dạng JSON giống y hệt React đang cần
-        List<java.util.Map<String, Object>> attendees = tickets.stream().map(ticket -> {
-            java.util.Map<String, Object> map = new java.util.HashMap<>();
+
+        List<Map<String, Object>> attendees = tickets.stream().map(ticket -> {
+            Map<String, Object> map = new HashMap<>();
             map.put("id", ticket.getId());
             map.put("ticketCode", ticket.getTicketCode());
             map.put("name", ticket.getUser() != null ? ticket.getUser().getFullName() : "Khách ẩn danh");
@@ -169,43 +163,38 @@ public class TicketController {
         return ResponseEntity.ok(attendees);
     }
 
-    // 2. Check-in thủ công
     @PutMapping("/{ticketId}/checkin")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<?> checkInTicket(@PathVariable Long ticketId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean hasPermission = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
-        if (!hasPermission) {
-            return ResponseEntity.status(403).body("Bạn không có quyền check-in sinh viên!");
-        }
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vé này!"));
 
         if (!canCheckIn(ticket)) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Vé chưa thanh toán nên không thể check-in."));
+            return ResponseEntity.badRequest().body(Map.of("message", "Vé chưa thanh toán nên không thể check-in."));
         }
-        
-        ticket.setScanned(true); // Đánh dấu đã tham gia
+
+        ticket.setScanned(true);
         ticketRepository.save(ticket);
-        
-        // Gửi Push Notification cho User báo đã check-in thành công
+
         eventPublisher.publishEvent(new com.unihub.workshop.event.UserNotificationEvent(
-            this, ticket.getUser(), "Check-in thành công", "Bạn đã check-in thành công vào sự kiện: " + ticket.getWorkshop().getTitle() + ". Chúc bạn tham gia vui vẻ!"
+            this, ticket.getUser(), "Check-in thành công",
+            "Bạn đã check-in thành công vào sự kiện: " + ticket.getWorkshop().getTitle() + ". Chúc bạn tham gia vui vẻ!"
         ));
-        
-        return ResponseEntity.ok(java.util.Map.of("message", "Check-in thành công!"));
+
+        return ResponseEntity.ok(Map.of("message", "Check-in thành công!"));
     }
+
     // ==========================================
-    // ENHANCEMENT 4: BULK OFFLINE CHECK-IN SYNC
+    // BULK OFFLINE CHECK-IN SYNC — chỉ ADMIN/STAFF
     // ==========================================
     @PutMapping("/batch-checkin")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     @Transactional
     public ResponseEntity<?> batchCheckInTickets(@RequestBody List<String> ticketCodes) {
         if (ticketCodes == null || ticketCodes.isEmpty()) {
             return ResponseEntity.badRequest().body("Danh sách vé trống, không có gì để đồng bộ.");
         }
 
-        // Thực thi Update hàng loạt xuống thẳng Database
         int updatedCount = ticketRepository.checkInBatch(ticketCodes, CHECK_IN_PAYMENT_STATUSES);
 
         Map<String, Object> response = new HashMap<>();
@@ -215,6 +204,4 @@ public class TicketController {
 
         return ResponseEntity.ok(response);
     }
-
-
 }

@@ -5,9 +5,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-@SpringBootApplication(exclude = {
-    org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration.class
-})
+/**
+ * Đã bỏ exclude RedisAutoConfiguration để hệ thống tận dụng Redis cho rate limit
+ * và fairness queue. Khi Redis offline, các thành phần phụ thuộc tự fallback
+ * sang in-memory (xem RateLimitInterceptor).
+ */
+@SpringBootApplication
 @EnableScheduling
 @EnableAsync
 public class WorkshopApplication {

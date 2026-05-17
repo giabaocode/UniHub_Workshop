@@ -1,4 +1,4 @@
-const WORKSHOP_ID = 32; // Đổi ID này thành ID của workshop bạn muốn test
+const WORKSHOP_ID = 34; // Đổi ID này thành ID của workshop bạn muốn test
 const BASE_URL = 'http://localhost:8081/api';
 
 async function runIdempotencyTest() {
